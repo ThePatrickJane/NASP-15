@@ -5,7 +5,9 @@ import (
 	//. "Projekat/Structures/Cache"
 	//. "Projekat/Structures/CountMinSketch"
 	//. "Projekat/Structures/HyperLogLog"
-	. "Projekat/Structures/TokenBucket"
+	//. "Projekat/Structures/TokenBucket"
+	. "Projekat/Settings"
+	"fmt"
 )
 
 func main() {
@@ -13,5 +15,8 @@ func main() {
 	//CountMinSketchProba()
 	//HyperLogLogProba()
 	//CacheProba()
-	TokenBucketProba()
+	//TokenBucketProba()
+	settings := Settings{Path: "settings.json"}
+	settings.LoadFromJSON()
+	fmt.Println(settings)
 }
