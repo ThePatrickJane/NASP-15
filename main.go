@@ -1,11 +1,11 @@
 package main
 
 import (
-	//. "Projekat/app/BloomFilter"
-	//. "Projekat/app/Cache"
-	//. "Projekat/app/CountMinSketch"
-	//. "Projekat/app/HyperLogLog"
-	. "Projekat/app/TokenBucket"
+	//. "Projekat/Structures/BloomFilter"
+	//. "Projekat/Structures/Cache"
+	//. "Projekat/Structures/CountMinSketch"
+	//. "Projekat/Structures/HyperLogLog"
+	. "Projekat/Structures/TokenBucket"
 )
 
 func main() {
