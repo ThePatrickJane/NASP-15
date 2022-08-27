@@ -30,7 +30,7 @@ func (sstable *SSTable) Construct() {
 	}
 	sstable.NumberOfFiles = 0
 	for _, file := range allDataFiles {
-		if strings.Contains(file.Name(), "SSTable_Data") {
+		if strings.Contains(file.Name(), "Data_Data") {
 			sstable.NumberOfFiles += 1
 		}
 	}
@@ -44,10 +44,10 @@ func (sstable *SSTable) Flush(elements []SkipList.Content) {
 //We use this method to process all the elements from the skip list and make corresponding files
 
 func (sstable *SSTable) CreateFiles(elements []SkipList.Content) {
-	file, err := os.OpenFile("./Data/SSTable_Data_lvl1_"+strconv.Itoa(sstable.NumberOfFiles+1)+".db", os.O_CREATE|os.O_APPEND, 0600)
-	indexFile, _ := os.OpenFile("./Data/SSTable_Index_Data_lvl1_"+strconv.Itoa(sstable.NumberOfFiles+1)+".db", os.O_CREATE|os.O_APPEND, 0600)
-	summaryFile, _ := os.OpenFile("./Data/SSTable_Summary_Data_lvl1_"+strconv.Itoa(sstable.NumberOfFiles+1)+".db", os.O_CREATE|os.O_APPEND, 0600)
-	filterFile, _ := os.OpenFile("./Data/SSTable_Filter_Data_lvl1_"+strconv.Itoa(sstable.NumberOfFiles+1)+".db", os.O_CREATE|os.O_RDWR, 0600)
+	file, err := os.OpenFile("./Data/Data_Data_lvl1_"+strconv.Itoa(sstable.NumberOfFiles+1)+".db", os.O_CREATE|os.O_APPEND, 0600)
+	indexFile, _ := os.OpenFile("./Data/Index_Data_lvl1_"+strconv.Itoa(sstable.NumberOfFiles+1)+".db", os.O_CREATE|os.O_APPEND, 0600)
+	summaryFile, _ := os.OpenFile("./Data/Summary_Data_lvl1_"+strconv.Itoa(sstable.NumberOfFiles+1)+".db", os.O_CREATE|os.O_APPEND, 0600)
+	filterFile, _ := os.OpenFile("./Data/Filter_Data_lvl1_"+strconv.Itoa(sstable.NumberOfFiles+1)+".db", os.O_CREATE|os.O_RDWR, 0600)
 
 	bloomFilter := BloomFilter.MakeBloomFilter(10, 0.1)
 
@@ -69,7 +69,7 @@ func (sstable *SSTable) CreateFiles(elements []SkipList.Content) {
 	//Creation and serialization of merkle tree
 	merkleTree := MerkleTree.MerkleTree{}
 	merkleTree.Form(sstable.MerkleElements)
-	merkleTree.Serialize("./Data/SSTable_Merkle_Data_lvl1_" + strconv.Itoa(sstable.NumberOfFiles) + ".db")
+	merkleTree.Serialize("./Data/MerkleTree_lvl1_" + strconv.Itoa(sstable.NumberOfFiles) + ".db")
 
 	//Bloom filter serialization
 	bloomSerijalizovan := bloomFilter.Serialize()
@@ -150,7 +150,7 @@ func (sstable *SSTable) InsertIntoIndexFile(key []byte, keyOffset int64, file *o
 }
 
 func ReadIndexFile(index int, indexFileOffset int) int {
-	file, err := os.OpenFile("./Data/SSTable_Index_Data_lvl1_"+strconv.Itoa(index)+".db", os.O_RDONLY, 0600)
+	file, err := os.OpenFile("./Data/Index_Data_lvl1_"+strconv.Itoa(index)+".db", os.O_RDONLY, 0600)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -200,7 +200,7 @@ func ReadSummaryFile(file *os.File, desiredKey string) int {
 func ReadDataFile(fileIndex int, dataFileOffset int) []byte {
 	fmt.Println("-------------Data File---------------")
 	fileIndexStr := strconv.Itoa(fileIndex)
-	file, err := os.OpenFile("./Data/SSTable_Data_lvl1_"+fileIndexStr+".db", os.O_RDONLY, 0600)
+	file, err := os.OpenFile("./Data/Data_Data_lvl1_"+fileIndexStr+".db", os.O_RDONLY, 0600)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -257,12 +257,12 @@ func CheckSummaryFiles(files []os.DirEntry, key string) []byte {
 	fileIndex := -1
 	for _, file := range files {
 		fileName := file.Name()
-		if strings.Contains(fileName, "SSTable_Summary") {
+		if strings.Contains(fileName, "Summary") {
 			indexFileOffset = KeyInSummaryFile(file.Name(), key)
 			if indexFileOffset == -1 {
 				continue
 			} else {
-				substr := fileName[26:]
+				substr := fileName[18:]
 				substr = strings.Replace(substr, ".db", "", -1)
 				fileIndex, _ = strconv.Atoi(substr)
 				break
@@ -272,7 +272,7 @@ func CheckSummaryFiles(files []os.DirEntry, key string) []byte {
 	if indexFileOffset == -1 {
 		return nil
 	}
-
+	
 	dataFileOffset := ReadIndexFile(fileIndex, indexFileOffset)
 	return ReadDataFile(fileIndex, dataFileOffset)
 }
@@ -296,13 +296,12 @@ func Find(key string) []byte {
 		return nil
 	}
 	return CheckSummaryFiles(allFiles, key)
-
 }
 
 func CheckBloomFilter(files []os.DirEntry, key string) bool {
 	for _, file := range files {
 		fileName := file.Name()
-		if strings.Contains(fileName, "SSTable_Filter") {
+		if strings.Contains(fileName, "Filter") {
 			bytes, _ := os.ReadFile("./Data/" + fileName)
 			newBloom := BloomFilter.BloomFilter{}
 			newBloom.Deserialize(bytes)

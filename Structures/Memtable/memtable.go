@@ -1,6 +1,7 @@
 package Memtable
 
 import (
+	"Projekat/Structures/SSTable"
 	skiplist "Projekat/Structures/SkipList"
 	"errors"
 )
@@ -43,6 +44,13 @@ func (memtable *Memtable) Delete(key string) (skiplist.Content, error) {
 
 func (memtable *Memtable) Get(key string) (skiplist.Content, error) {
 	return memtable.data.Get(key)
+}
+
+func (memtable *Memtable) BrziAdd(key string, value []byte) {
+	memtable.data.Add(key, value)
+}
+func (memtable *Memtable) Flush(sstable SSTable.SSTable) {
+	sstable.Flush(memtable.data.GetElements())
 }
 
 //func metoda([]Wal.Segment) {

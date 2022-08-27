@@ -4,7 +4,7 @@ import (
 	"Projekat/Structures/CountMinSketch"
 	"Projekat/Structures/HyperLogLog"
 	"Projekat/Structures/KVEngine"
-	"Projekat/Structures/Wal"
+	"Projekat/Structures/SSTable"
 	"bufio"
 	"fmt"
 	"os"
@@ -179,5 +179,15 @@ func main() {
 
 	//mainMenu(&kvengine)
 
-	Wal.WALProba()
+	//Wal.WALProba()
+	sstable := SSTable.SSTable{}
+	sstable.Construct()
+	//mem := Memtable.New(5, 5)
+	//mem.BrziAdd("proba3", []byte("123"))
+	//mem.BrziAdd("proba1", []byte("1234"))
+	//mem.BrziAdd("proba2", []byte("12345"))
+	//mem.BrziAdd("proba1", []byte("1234"))
+	//mem.BrziAdd("proba2", []byte("12345"))
+	//mem.Flush(sstable)
+	SSTable.Find("proba2")
 }
