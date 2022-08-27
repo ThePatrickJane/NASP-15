@@ -173,9 +173,9 @@ func ReadSummaryFile(file *os.File, desiredKey string) int {
 
 	firstKey, lastKey := ReadSummaryFileLimits(file)
 	if desiredKey >= firstKey && desiredKey <= lastKey {
-		fmt.Println("Status: Found")
+		//fmt.Println("Status: Found")
 	} else {
-		fmt.Println("Status: Not found")
+		//fmt.Println("Status: Not found")
 		return -1
 	}
 
@@ -198,14 +198,21 @@ func ReadSummaryFile(file *os.File, desiredKey string) int {
 }
 
 func ReadDataFile(fileIndex int, dataFileOffset int) []byte {
-	fmt.Println("-------------Data File---------------")
+	//fmt.Println("-------------Data File---------------")
 	fileIndexStr := strconv.Itoa(fileIndex)
 	file, err := os.OpenFile("./Data/Data_Data_lvl1_"+fileIndexStr+".db", os.O_RDONLY, 0600)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	file.Seek(int64(dataFileOffset)+21, 0)
+	file.Seek(int64(dataFileOffset)+20, 0)
+
+	tombstoneBin := make([]byte, 1)
+	file.Read(tombstoneBin)
+	if tombstoneBin[0] == 1 {
+		fmt.Println("Trazena vrednost je logicki obrisana.")
+		return nil
+	}
 
 	keySize := make([]byte, 8)
 	valueSize := make([]byte, 8)
@@ -216,14 +223,14 @@ func ReadDataFile(fileIndex int, dataFileOffset int) []byte {
 	keySizeParsed := binary.BigEndian.Uint64(keySize)
 	key := make([]byte, keySizeParsed)
 	file.Read(key)
-	fmt.Println(string(key))
+	//fmt.Println(string(key))
 
 	valueSizeParsed := binary.BigEndian.Uint64(valueSize)
 	value := make([]byte, valueSizeParsed)
 	file.Read(value)
-	fmt.Println(string(value))
+	//fmt.Println(string(value))
 	file.Close()
-	fmt.Println("-------------------------------------")
+	//fmt.Println("-------------------------------------")
 	return value
 }
 
@@ -292,7 +299,7 @@ func KeyInSummaryFile(fileName string, key string) int {
 func Find(key string) []byte {
 	allFiles := GetAllFiles()
 	if !CheckBloomFilter(allFiles, key) {
-		fmt.Println("Status: Not Found")
+		//fmt.Println("Status: Not Found")
 		return nil
 	}
 	return CheckSummaryFiles(allFiles, key)
@@ -323,15 +330,15 @@ func ReadSummaryFileLimits(summaryFile *os.File) (string, string) {
 	firstKeySizeParsed := binary.BigEndian.Uint64(firstKeySize)
 	firstKey := make([]byte, firstKeySizeParsed)
 	summaryFile.Read(firstKey)
-	fmt.Println("-------------Key limits--------------")
-	fmt.Println("First key: " + string(firstKey))
+	//fmt.Println("-------------Key limits--------------")
+	//fmt.Println("First key: " + string(firstKey))
 
 	summaryFile.Read(lastKeySize)
 	lastKeySizeParsed := binary.BigEndian.Uint64(lastKeySize)
 	lastKey := make([]byte, lastKeySizeParsed)
 	summaryFile.Read(lastKey)
-	fmt.Println("Last key: " + string(lastKey))
-	fmt.Println("-------------------------------------")
+	//fmt.Println("Last key: " + string(lastKey))
+	//fmt.Println("-------------------------------------")
 
 	return string(firstKey), string(lastKey)
 }

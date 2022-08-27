@@ -4,7 +4,6 @@ import (
 	"Projekat/Structures/CountMinSketch"
 	"Projekat/Structures/HyperLogLog"
 	"Projekat/Structures/KVEngine"
-	"Projekat/Structures/SSTable"
 	"bufio"
 	"fmt"
 	"os"
@@ -49,7 +48,7 @@ func getMenu(kvengine *KVEngine.KVEngine) {
 		found, data := kvengine.Get(key)
 
 		if !found {
-			fmt.Println("Pod zadatim kljucem ne postoji vrednost.")
+			fmt.Println("Neuspelo trazenje.")
 			break
 		}
 
@@ -175,13 +174,13 @@ func main() {
 	//settings.LoadFromJSON()
 	//fmt.Println(settings)
 
-	//kvengine := KVEngine.MakeKVEngine()
+	kvengine := KVEngine.MakeKVEngine()
 
-	//mainMenu(&kvengine)
+	mainMenu(&kvengine)
 
 	//Wal.WALProba()
-	sstable := SSTable.SSTable{}
-	sstable.Construct()
+	//sstable := SSTable.SSTable{}
+	//sstable.Construct()
 	//mem := Memtable.New(5, 5)
 	//mem.BrziAdd("proba3", []byte("123"))
 	//mem.BrziAdd("proba1", []byte("1234"))
@@ -189,5 +188,5 @@ func main() {
 	//mem.BrziAdd("proba1", []byte("1234"))
 	//mem.BrziAdd("proba2", []byte("12345"))
 	//mem.Flush(sstable)
-	SSTable.Find("proba2")
+	//SSTable.Find("proba2")
 }
