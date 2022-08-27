@@ -94,6 +94,19 @@ func MakeCountMinSketch(epsilon float64, delta float64) CountMinSketch {
 	return cms
 }
 
+func GetTestCMS() CountMinSketch {
+	cms := MakeCountMinSketch(0.1, 0.1)
+	cms.Add("milos")
+	cms.Add("milos")
+	cms.Add("milos")
+	cms.Add("milos")
+	cms.Add("mladen")
+	cms.Add("mladen")
+	cms.Add("pera")
+	cms.Add("pera")
+	return cms
+}
+
 func CountMinSketchProba() {
 	cms := MakeCountMinSketch(0.1, 0.1)
 	cms.Add("milos")

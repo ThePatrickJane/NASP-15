@@ -102,6 +102,22 @@ func MakeHyperLogLog(p uint8) HyperLogLog {
 	return hll
 }
 
+func GetTestHLL() HyperLogLog {
+	hll := MakeHyperLogLog(7)
+	hll.Add("proba")
+	hll.Add("proba")
+	hll.Add("proba1")
+	hll.Add("proba1")
+	hll.Add("proba2")
+	hll.Add("proba")
+	hll.Add("proba1")
+	hll.Add("proba3")
+	hll.Add("proba4")
+	hll.Add("proba5")
+	hll.Add("proba6")
+	return hll
+}
+
 func HyperLogLogProba() {
 	hll := MakeHyperLogLog(7)
 	hll.Add("lkjh mi trava je zelna")
