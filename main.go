@@ -4,6 +4,7 @@ import (
 	"Projekat/Structures/CountMinSketch"
 	"Projekat/Structures/HyperLogLog"
 	"Projekat/Structures/KVEngine"
+	"Projekat/Structures/Wal"
 	"bufio"
 	"fmt"
 	"os"
@@ -44,9 +45,9 @@ func getMenu(kvengine *KVEngine.KVEngine) {
 
 		text, _ := reader.ReadString('\n')
 		text = strings.Replace(text, "\n", "", -1)
-		
+
 		found, data := kvengine.Get(key)
-		
+
 		if !found {
 			fmt.Println("Pod zadatim kljucem ne postoji vrednost.")
 			break
@@ -104,9 +105,9 @@ func putMenu(kvengine *KVEngine.KVEngine) {
 			value, _ := reader.ReadString('\n')
 			value = strings.Replace(value, "\n", "", -1)
 			data := []byte(value)
-			
+
 			inserted := kvengine.Put(key, data)
-			
+
 			if inserted {
 				fmt.Println("Uspesno je dodata vrednost pod zadatim kljucem.")
 			} else {
@@ -114,7 +115,7 @@ func putMenu(kvengine *KVEngine.KVEngine) {
 			}
 
 		} else if strings.Compare(text, "2") == 0 {
-			
+
 			hll := HyperLogLog.GetTestHLL()
 			data := hll.Serialize()
 
@@ -156,7 +157,7 @@ func deleteMenu(kvengine *KVEngine.KVEngine) {
 	key = strings.Replace(key, "\n", "", -1)
 
 	deleted := kvengine.Delete(key)
-	
+
 	if deleted {
 		fmt.Println("Uspesno je izbrisana vrednost pod zadatim kljucem.")
 	} else {
@@ -173,8 +174,10 @@ func main() {
 	//settings := Settings{Path: "settings.json"}
 	//settings.LoadFromJSON()
 	//fmt.Println(settings)
-	
-	kvengine := KVEngine.MakeKVEngine()
-	
-	mainMenu(&kvengine)
+
+	//kvengine := KVEngine.MakeKVEngine()
+
+	//mainMenu(&kvengine)
+
+	Wal.WALProba()
 }

@@ -7,10 +7,10 @@ import (
 	"github.com/spaolacci/murmur3"
 	"hash"
 	"hash/crc32"
-	"io/ioutil"
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -38,33 +38,38 @@ type Segment struct {
 }
 
 // Konstruktor za segment
-func (segment *Segment) construct(key []byte, value []byte, tombstone uint8) {
+func (segment *Segment) Construct(key []byte, value []byte, tombstone uint8) {
 	segment.key = key
 	segment.value = value
 	segment.crc = make([]byte, 4)
-	binary.LittleEndian.PutUint32(segment.crc, uint32(CRC32(key)))
+	binary.BigEndian.PutUint32(segment.crc, uint32(CRC32(key)))
 	segment.timestamp = make([]byte, 16)
-	binary.LittleEndian.PutUint64(segment.timestamp, uint64(time.Now().Unix()))
+	binary.BigEndian.PutUint64(segment.timestamp, uint64(time.Now().Unix()))
 	segment.tombstone = make([]byte, 1)
 	segment.tombstone[0] = byte(tombstone)
 	segment.keysize = make([]byte, 8)
-	binary.LittleEndian.PutUint64(segment.keysize, uint64(len(key)))
+	binary.BigEndian.PutUint64(segment.keysize, uint64(len(key)))
 	segment.valuesize = make([]byte, 8)
-	binary.LittleEndian.PutUint64(segment.valuesize, uint64(len(value)))
+	binary.BigEndian.PutUint64(segment.valuesize, uint64(len(value)))
 }
 
 type WAL struct {
-	segments         []Segment
-	file_path        string
-	treshold         int8
-	segment_treshold int8
-	file_num         int
+	segments             []Segment
+	file_path            string
+	treshold             int8
+	segment_treshold     int8
+	file_num             int
+	maxElementsInSegment int
+	maxSegments          int
 }
 
 // Konstruktor za WAL
-func (wal *WAL) constuct() {
+func (wal *WAL) Constuct(maxElements int, maxSegments int) {
 	wal.treshold = 0
 	wal.segment_treshold = 0
+	wal.maxElementsInSegment = maxElements
+	wal.file_path = "./Data/WAL1.db"
+	wal.maxSegments = maxSegments
 	wal.readMMap()
 }
 
@@ -79,18 +84,21 @@ func isError(err error) bool {
 // Dodavanje elementa u WAL
 func (wal *WAL) append(key []byte, value []byte, tombstone uint8) {
 	segment := Segment{}
-	segment.construct(key, value, tombstone)
+	segment.Construct(key, value, tombstone)
 	//println(binary.Size(segment))
 	wal.segments = append(wal.segments, segment)
 	wal.treshold += 1
 	wal.segment_treshold += 1
 	//Na 5 segmenta pravi novi Wal file
-	if wal.segment_treshold >= 5 {
+	if int(wal.segment_treshold) > wal.maxElementsInSegment {
 		wal.write_to_file_MMap(segment)
 		wal.segment_treshold = 0
+		if wal.file_num > wal.maxSegments {
+			wal.deleteOldSegments()
+		}
 		return
 	}
-	file, err := os.OpenFile(wal.file_path, os.O_RDWR, 0600)
+	file, err := os.OpenFile(wal.file_path, os.O_RDWR|os.O_CREATE, 0600)
 	if isError(err) {
 		return
 	}
@@ -98,27 +106,24 @@ func (wal *WAL) append(key []byte, value []byte, tombstone uint8) {
 }
 
 func (wal *WAL) readMMap() {
-	files, err := ioutil.ReadDir("Wal")
+	allDataFiles, err := os.ReadDir("./Data/")
 	if err != nil {
-		log.Fatal(err)
+		panic(err)
 	}
-
-	//Ako ne postoje Wal fajlovi napravi novi
-	//if len(files) == 0 {
-	//	_, err := os.OpenFile("Wal\\WAL1", os.O_CREATE, 0600)
-	//	wal.mapa = nil
-	//	if isError(err) {
-	//		return
-	//	}
-	//	wal.file_num = 1
-	//	wal.file_path = "Wal\\WAL1"
-	//	return
-	//}
-	wal.file_num = len(files)
-	file, err := os.OpenFile("Wal\\Wal"+strconv.Itoa(len(files)), os.O_RDWR, 0644)
+	index := 0
+	for _, file := range allDataFiles {
+		if strings.Contains(file.Name(), "WAL") {
+			index += 1
+		}
+	}
+	if index == 0 {
+		return
+	}
+	wal.file_num = index
+	file, err := os.OpenFile("./Data/WAL"+strconv.Itoa(index)+".db", os.O_RDWR, 0644)
 	mmapf, err := mmap.Map(file, mmap.RDWR, 0)
 	defer mmapf.Unmap()
-	wal.file_path = "Wal\\Wal" + strconv.Itoa(len(files))
+	wal.file_path = "./Data/WAL" + strconv.Itoa(index) + ".db"
 	if mmapf == nil {
 		return
 	}
@@ -133,8 +138,8 @@ func (wal *WAL) readMMap() {
 		if end+new_reading_size > len(mmapf) {
 			break
 		}
-		velicina_kljuca := binary.LittleEndian.Uint64(result[start+21 : start+29])
-		velicina_vrednosti := binary.LittleEndian.Uint64(result[start+29 : end])
+		velicina_kljuca := binary.BigEndian.Uint64(result[start+21 : start+29])
+		velicina_vrednosti := binary.BigEndian.Uint64(result[start+29 : end])
 		new_reading_size = int(velicina_kljuca + velicina_vrednosti)
 		key := string(result[end : end+int(velicina_kljuca)])
 		value := string(result[end+int(velicina_kljuca) : end+int(new_reading_size)])
@@ -145,69 +150,74 @@ func (wal *WAL) readMMap() {
 		wal.segment_treshold += 1
 	}
 
+	file.Close()
+
 }
 
-//func (wal *Wal) read() {
-//	//Ucitavanje wal fajlova
-//	files, err := ioutil.ReadDir("Wal")
-//	if err != nil {
-//		log.Fatal(err)
-//	}
-//
-//	//Ako ne postoje Wal fajlovi napravi novi
-//	if len(files) == 0 {
-//		_, err := os.OpenFile("Wal\\WAL1", os.O_CREATE, 0600)
-//		//mmapf, err := mmap.Map(file, mmap.RDWR, 0)
-//		//wal.mapa = mmapf
-//		if isError(err) {
-//			return
-//		}
-//		wal.file_num = 1
-//		wal.file_path = "Wal\\WAL1"
-//		return
-//	}
-//
-//	//Otvaranje zadnjeg wal fajla
-//	wal.file_num = len(files)
-//	file, err := os.OpenFile("Wal\\Wal"+strconv.Itoa(len(files)), os.O_RDONLY, 0644)
-//	//mmapf, err := mmap.Map(file, mmap.RDWR, 0)
-//	//wal.mapa = mmapf
-//	if isError(err) {
-//		return
-//	}
-//	wal.file_path = "Wal\\Wal" + strconv.Itoa(len(files))
-//	reader := bufio.NewReader(file)
-//	//Citanje zapisa iz zadnjeg Wal segmenta
-//	for {
-//		byteSlice := make([]byte, 37)
-//		bytesRead, err := reader.Read(byteSlice)
-//		if isError(err) {
-//			return
-//		}
-//		velicina_kljuca := binary.LittleEndian.Uint64(byteSlice[21:29])
-//		velicina_vrednosti := binary.LittleEndian.Uint64(byteSlice[29:])
-//		new_reading_size := velicina_kljuca + velicina_vrednosti
-//		byteSlice = make([]byte, new_reading_size)
-//		bytesRead, err = reader.Read(byteSlice)
-//		key := string(byteSlice[0:velicina_kljuca])
-//		value := string(byteSlice[velicina_kljuca:])
-//		println("Procitano bajta:", bytesRead)
-//		println("Kljuc:", key)
-//		println("Vrednost:", value)
-//
-//		wal.segment_treshold += 1
-//	}
-//	file.Close()
-//}
+func ReadLastSegment() []Segment {
+	allDataFiles, err := os.ReadDir("./Data/")
+	if err != nil {
+		panic(err)
+	}
+	index := 0
+	for _, file := range allDataFiles {
+		if strings.Contains(file.Name(), "WAL") {
+			index += 1
+		}
+	}
+	if index == 0 {
+		return nil
+	}
+	file, err := os.OpenFile("./Data/WAL"+strconv.Itoa(index)+".db", os.O_RDWR, 0644)
+	mmapf, err := mmap.Map(file, mmap.RDWR, 0)
+	defer mmapf.Unmap()
+	if mmapf == nil {
+		return nil
+	}
+	result := make([]byte, len(mmapf))
+	copy(result, mmapf)
+	start := 0
+	end := 37
+	new_reading_size := 0
+	segments := make([]Segment, 0)
+	for {
+		//println(end + new_reading_size)
+		//println(mmapf)
+		if end+new_reading_size > len(mmapf) {
+			break
+		}
+		crc := result[start : start+4]
+		timestamp := result[start+4 : start+20]
+		tombstone := result[start+20 : start+21]
+		velicina_kljuca := binary.BigEndian.Uint64(result[start+21 : start+29])
+		velicina_vrednosti := binary.BigEndian.Uint64(result[start+29 : end])
+		new_reading_size = int(velicina_kljuca + velicina_vrednosti)
+		key := result[end : end+int(velicina_kljuca)]
+		value := result[end+int(velicina_kljuca) : end+int(new_reading_size)]
+		start = end + int(new_reading_size)
+		segment := Segment{}
+		segment.crc = crc
+		segment.timestamp = timestamp
+		segment.tombstone = tombstone
+		segment.keysize = result[start+21 : start+29]
+		segment.valuesize = result[start+29 : end]
+		segment.key = key
+		segment.value = value
+		end = start + 37
+		segments = append(segments, segment)
+	}
+	return segments
+
+}
 
 func (wal *WAL) write_to_file_MMap(segment Segment) {
-	file, err := os.OpenFile("Wal\\Wal"+strconv.Itoa(int(wal.file_num+1)), os.O_RDWR|os.O_CREATE, 0600)
-	wal.file_path = "Wal\\Wal" + strconv.Itoa(int(wal.file_num+1))
+	file, err := os.OpenFile("./Data/WAL"+strconv.Itoa(int(wal.file_num+1))+".db", os.O_RDWR|os.O_CREATE, 0600)
+	wal.file_path = "./Data/WAL" + strconv.Itoa(int(wal.file_num+1)) + ".db"
 	if isError(err) {
 		return
 	}
 	wal.writeMMap(file, segment)
-	file.Close()
+	wal.file_num += 1
 }
 
 func (wal *WAL) writeMMap(file *os.File, segment Segment) {
@@ -229,14 +239,6 @@ func (wal *WAL) writeMMap(file *os.File, segment Segment) {
 		return
 	}
 	mmapf, err := mmap.Map(file, mmap.RDWR, 0)
-	defer mmapf.Unmap()
-	//if wal.mapa == nil {
-	//	mmapf, err := mmap.Map(file, mmap.RDWR, 0)
-	//	if isError(err) {
-	//		return
-	//	}
-	//	wal.mapa = mmapf
-	//}
 	copy(mmapf[currentLen:currentLen+int64(binary.Size(segment.crc))], segment.crc)
 	currentLen += int64(binary.Size(segment.crc))
 	copy(mmapf[currentLen:currentLen+int64(binary.Size(segment.timestamp))], segment.timestamp)
@@ -251,13 +253,39 @@ func (wal *WAL) writeMMap(file *os.File, segment Segment) {
 	currentLen += int64(binary.Size(segment.key))
 	copy(mmapf[currentLen:], segment.value)
 	currentLen += int64(binary.Size(segment.value))
+	mmapf.Unmap()
+	file.Close()
+}
+
+func (wal *WAL) deleteOldSegments() {
+	allDataFiles, err := os.ReadDir("./Data/")
+	if err != nil {
+		panic(err)
+	}
+	fileNames := make([]string, 0)
+	for _, file := range allDataFiles {
+		if strings.Contains(file.Name(), "WAL") {
+			fileNames = append(fileNames, file.Name())
+		}
+	}
+	if len(fileNames) == 0 {
+		return
+	}
+	for index := 0; index < len(fileNames)-1; index++ {
+		err = os.Remove("./Data/" + fileNames[index])
+		fmt.Println(err)
+	}
+	err = os.Rename("./Data/"+fileNames[len(fileNames)-1], "./Data/WAL1.db")
+	wal.file_path = "./Data/WAL1.db"
+	fmt.Println(err)
+
 }
 
 func (wal *WAL) write_to_file(file *os.File) {
 	for _, segment := range wal.segments {
 		wal.write(file, segment)
 	}
-	file_1, err := os.OpenFile("Wal\\Wal"+strconv.Itoa(int(wal.file_num+1)), os.O_CREATE, 0600)
+	file_1, err := os.OpenFile("./Data/WAL"+strconv.Itoa(int(wal.file_num+1))+".db", os.O_CREATE, 0600)
 	if isError(err) {
 		return
 	}
@@ -266,39 +294,39 @@ func (wal *WAL) write_to_file(file *os.File) {
 }
 
 func (wal *WAL) write(file *os.File, segment Segment) {
-	err := binary.Write(file, binary.LittleEndian, segment.crc)
+	err := binary.Write(file, binary.BigEndian, segment.crc)
 	if err != nil {
 		log.Fatal("Write failed")
 	}
 
-	err = binary.Write(file, binary.LittleEndian, segment.timestamp)
+	err = binary.Write(file, binary.BigEndian, segment.timestamp)
 	if err != nil {
 		log.Fatal("Write failed")
 	}
 
-	err = binary.Write(file, binary.LittleEndian, segment.tombstone)
+	err = binary.Write(file, binary.BigEndian, segment.tombstone)
 	if err != nil {
 		log.Fatal("Write failed")
 	}
 
-	err = binary.Write(file, binary.LittleEndian, segment.keysize)
-	println(binary.LittleEndian.Uint64(segment.keysize))
+	err = binary.Write(file, binary.BigEndian, segment.keysize)
+	println(binary.BigEndian.Uint64(segment.keysize))
 	if err != nil {
 		log.Fatal("Write failed")
 	}
 
-	err = binary.Write(file, binary.LittleEndian, segment.valuesize)
-	println(binary.LittleEndian.Uint64(segment.valuesize))
+	err = binary.Write(file, binary.BigEndian, segment.valuesize)
+	println(binary.BigEndian.Uint64(segment.valuesize))
 	if err != nil {
 		log.Fatal("Write failed")
 	}
 
-	err = binary.Write(file, binary.LittleEndian, segment.key)
+	err = binary.Write(file, binary.BigEndian, segment.key)
 	if err != nil {
 		log.Fatal("Write failed")
 	}
 
-	err = binary.Write(file, binary.LittleEndian, segment.value)
+	err = binary.Write(file, binary.BigEndian, segment.value)
 	if err != nil {
 		log.Fatal("Write failed")
 	}
@@ -329,17 +357,14 @@ func CreateHashFunctionsS(k uint) []hash.Hash32 {
 	return h
 }
 
-func SSTableProba() {
+func WALProba() {
 	wal := WAL{}
-	wal.constuct()
+	wal.Constuct(5, 3)
 	//wal.append([]byte("1"), []byte("asdfsdf"), 1)
 	//wal.append([]byte("123"), []byte("noicee"), 1)
 	//wal.append([]byte("1s"), []byte("asdfsdf1231"), 1)
 	//wal.append([]byte("123fd"), []byte("noicee4363"), 1)
 	//wal.append([]byte("1dfg"), []byte("asdfsdf6568"), 1)
-	wal.readMMap()
-}
-
-func main() {
-	SSTableProba()
+	//wal.readMMap()
+	//wal.deleteOldSegments()
 }

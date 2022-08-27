@@ -290,10 +290,26 @@ func KeyInSummaryFile(fileName string, key string) int {
 }
 
 func Find(key string) []byte {
-	//sstable := SSTable{}
 	allFiles := GetAllFiles()
+	if !CheckBloomFilter(allFiles, key) {
+		fmt.Println("Status: Not Found")
+		return nil
+	}
 	return CheckSummaryFiles(allFiles, key)
 
+}
+
+func CheckBloomFilter(files []os.DirEntry, key string) bool {
+	for _, file := range files {
+		fileName := file.Name()
+		if strings.Contains(fileName, "SSTable_Filter") {
+			bytes, _ := os.ReadFile("./Data/" + fileName)
+			newBloom := BloomFilter.BloomFilter{}
+			newBloom.Deserialize(bytes)
+			return newBloom.Search(key)
+		}
+	}
+	return false
 }
 
 func CRC32(data []byte) uint32 {

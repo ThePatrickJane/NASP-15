@@ -6,23 +6,20 @@ import (
 )
 
 type Memtable struct {
-	data *skiplist.SkipList
+	data        *skiplist.SkipList
 	maxElNumber int
 	curElNumber int
-
 }
-
 
 func New(maxHeight int, maxElNumber int) *Memtable {
 	return &Memtable{
-		data: skiplist.New(maxHeight),
+		data:        skiplist.New(maxHeight),
 		maxElNumber: maxElNumber,
 	}
 }
 
 func (memtable *Memtable) Add(key string, value []byte) (skiplist.Content, error) {
 	// racunanje velicine elementa koji ce se dodati
-	
 
 	// provera da li ima mesta u memtable
 	if memtable.maxElNumber > memtable.curElNumber+1 {
@@ -48,16 +45,19 @@ func (memtable *Memtable) Get(key string) (skiplist.Content, error) {
 	return memtable.data.Get(key)
 }
 
+//func metoda([]Wal.Segment) {
+//
+//}
+
 func (memtable *Memtable) Update(key string, value []byte) (skiplist.Content, error) {
 
-	
 	// preuzimanje elementa kojeg zelimo da update i update
-	updatedElement, err := memtable.data.Update(key,value)
+	updatedElement, err := memtable.data.Update(key, value)
 	if err != nil {
 		return skiplist.Content{}, err
 	}
 	return updatedElement, nil
-	
+
 }
 
 func (memtable *Memtable) Serialize() map[string]skiplist.Content {
