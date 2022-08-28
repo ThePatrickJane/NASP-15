@@ -87,7 +87,7 @@ func (list *SkipList) randomLevel() int {
 	return level
 }
 
-func (list *SkipList) Add(key string, value []byte) Content {
+func (list *SkipList) Add(key string, value []byte, tombstone bool) Content {
 
 	if list.Contains(key) {
 		updatedContent, err := list.Update(key, value)
@@ -102,7 +102,7 @@ func (list *SkipList) Add(key string, value []byte) Content {
 		key:       key,
 		value:     value,
 		timestamp: time.Now().Unix(),
-		tombstone: false,
+		tombstone: tombstone,
 		next:      make([]*Node, level+1),
 	}
 
@@ -190,6 +190,16 @@ func (list *SkipList) Update(key string, value []byte) (Content, error) {
 		}, nil
 	}
 	return Content{}, errors.New("key not found")
+}
+
+func (list *SkipList) LogDelete(key string) bool {
+	node := list.get(key)
+	if node != nil {
+		node.timestamp = time.Now().Unix()
+		node.tombstone = true
+		return true
+	}
+	return false
 }
 
 func (list *SkipList) Delete(key string) (Content, error) {

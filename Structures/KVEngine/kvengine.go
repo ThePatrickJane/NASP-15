@@ -25,11 +25,11 @@ func (kve *KVEngine) Get(key string) (bool, []byte) {
 	}
 
 	if content, err := kve.memtable.Get(key); err == nil && !content.Tombstone {
-		kve.cache.Put(content.Key, content.Value)
+		//kve.cache.Put(content.Key, content.Value)
 		fmt.Println("Nadjeno u memtable.")
 		return true, content.Value
 	}
-
+	fmt.Println(kve.cache)
 	if found, data := kve.cache.Get(key); found {
 		fmt.Println("Nadjeno u cache.")
 		return true, data
@@ -53,7 +53,7 @@ func (kve *KVEngine) Put(key string, data []byte) bool {
 
 	kve.wal.Insert([]byte(key), data, 0)
 
-	kve.memtable.Add(key, data)
+	kve.memtable.Add(key, data, false)
 
 	return true
 }
@@ -63,6 +63,12 @@ func (kve *KVEngine) Delete(key string) bool {
 	if !kve.tokenBucket.UseToken() {
 		fmt.Println("Nema dovoljno tokena.")
 		return false
+	}
+
+	kve.wal.Insert([]byte(key), make([]byte, 0), 1)
+
+	if deleted := kve.memtable.LogDelete(key); !deleted {
+		kve.memtable.Add(key, make([]byte, 0), true)
 	}
 
 	return true

@@ -119,6 +119,8 @@ func putMenu(kvengine *KVEngine.KVEngine) {
 				fmt.Println("Neuspesno dodavanje.")
 			}
 
+			break
+
 		} else if strings.Compare(text, "2") == 0 {
 
 			hll := HyperLogLog.GetTestHLL()
@@ -133,6 +135,8 @@ func putMenu(kvengine *KVEngine.KVEngine) {
 				fmt.Println("Neuspesno dodavanje.")
 			}
 
+			break
+
 		} else if strings.Compare(text, "3") == 0 {
 
 			cms := CountMinSketch.GetTestCMS()
@@ -146,6 +150,8 @@ func putMenu(kvengine *KVEngine.KVEngine) {
 			} else {
 				fmt.Println("Neuspesno dodavanje.")
 			}
+
+			break
 
 		} else if strings.Compare(text, "0") == 0 {
 			break
@@ -182,19 +188,23 @@ func main() {
 	//fmt.Println(settings)
 
 	kvengine := KVEngine.MakeKVEngine()
-	//
-	//mainMenu(&kvengine)
+
+	//for i := 1; i < 7; i++ {
+	//	kvengine.Put("proba" + strconv.Itoa(i), []byte(strconv.Itoa(i)))
+	//}
+	mainMenu(&kvengine)
+	//Cache.CacheProba()
 
 	//Wal.WALProba()
 	//sstable := SSTable.SSTable{}
 	//sstable.Construct()
 	//mem := Memtable.New(5, 5)
-	kvengine.Put("proba", []byte("1"))
-	kvengine.Put("proba1", []byte("1"))
-	kvengine.Put("proba2", []byte("1"))
-	kvengine.Put("proba3", []byte("1"))
-	kvengine.Put("proba4", []byte("1"))
-	kvengine.Put("proba5", []byte("1"))
+	//kvengine.Put("proba", []byte("1"))
+	//kvengine.Put("proba1", []byte("1"))
+	//kvengine.Put("proba2", []byte("1"))
+	//kvengine.Put("proba3", []byte("1"))
+	//kvengine.Put("proba4", []byte("1"))
+	//kvengine.Put("proba5", []byte("1"))
 	//mem.BrziAdd("proba3", []byte("123"))
 	//mem.BrziAdd("proba1", []byte("1234"))
 	//mem.BrziAdd("proba2", []byte("12345"))

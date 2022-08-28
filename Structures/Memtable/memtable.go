@@ -19,7 +19,7 @@ func New(maxHeight int, maxElNumber int) *Memtable {
 	}
 }
 
-func (memtable *Memtable) Add(key string, value []byte) {
+func (memtable *Memtable) Add(key string, value []byte, tombstone bool) {
 	// racunanje velicine elementa koji ce se dodati
 
 	// provera da li ima mesta u memtable
@@ -27,7 +27,7 @@ func (memtable *Memtable) Add(key string, value []byte) {
 		memtable.Flush()
 	}
 
-	memtable.data.Add(key, value)
+	memtable.data.Add(key, value, tombstone)
 	memtable.curElNumber += 1
 }
 
@@ -48,7 +48,7 @@ func (memtable *Memtable) Get(key string) (skiplist.Content, error) {
 }
 
 func (memtable *Memtable) BrziAdd(key string, value []byte) {
-	memtable.data.Add(key, value)
+	memtable.data.Add(key, value, false)
 }
 func (memtable *Memtable) Flush() {
 	sstable := SSTable.SSTable{}
@@ -71,6 +71,10 @@ func (memtable *Memtable) Update(key string, value []byte) (skiplist.Content, er
 	}
 	return updatedElement, nil
 
+}
+
+func (memtable *Memtable) LogDelete(key string) bool {
+	return memtable.data.LogDelete(key)
 }
 
 func (memtable *Memtable) Serialize() map[string]skiplist.Content {

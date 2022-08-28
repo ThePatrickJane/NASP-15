@@ -33,7 +33,9 @@ func (c *Cache) Get(key string) (bool, []byte) {
 
 	c.data.MoveToFront(elem)
 
-	return true, elem.Value.(list.Element).Value.(Record).value
+	data := elem.Value.(list.Element).Value.(Record).value
+
+	return true, data
 }
 
 func (c *Cache) Put(key string, value []byte) {
@@ -61,6 +63,11 @@ func (c *Cache) Put(key string, value []byte) {
 
 func (c *Cache) Remove(key string) {
 	el := c.lookup[key]
+
+	if el == nil {
+		return
+	}
+
 	c.data.Remove(el)
 	delete(c.lookup, el.Value.(list.Element).Value.(Record).key)
 }
@@ -71,14 +78,16 @@ func CacheProba() { // 2 3 4 1   3 4 1 5
 	c.Put("key2", []byte("mladen"))
 	c.Put("key3", []byte("pera"))
 	c.Put("key4", []byte("zika"))
-	fmt.Println(c.Get("key1"))
-	c.Put("key5", []byte("stoja"))
-	fmt.Println(c.Get("key2"))
-	fmt.Println(c.Get("key3"))
-	c.Remove("key1")
-	fmt.Println(c.Get("key5"))
+	c.Remove("key6")
 	fmt.Println(c)
-	for e := c.data.Front(); e != nil; e = e.Next() {
-		fmt.Println(e)
-	}
+	//fmt.Println(c.Get("key1"))
+	//c.Put("key5", []byte("stoja"))
+	//fmt.Println(c.Get("key2"))
+	//fmt.Println(c.Get("key3"))
+	//c.Remove("key1")
+	//fmt.Println(c.Get("key5"))
+	//fmt.Println(c)
+	//for e := c.data.Front(); e != nil; e = e.Next() {
+	//	fmt.Println(e)
+	//}
 }
