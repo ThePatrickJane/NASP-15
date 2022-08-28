@@ -3,7 +3,7 @@ package Memtable
 import (
 	"Projekat/Structures/SSTable"
 	skiplist "Projekat/Structures/SkipList"
-	"errors"
+	"fmt"
 )
 
 type Memtable struct {
@@ -19,15 +19,16 @@ func New(maxHeight int, maxElNumber int) *Memtable {
 	}
 }
 
-func (memtable *Memtable) Add(key string, value []byte) (skiplist.Content, error) {
+func (memtable *Memtable) Add(key string, value []byte) {
 	// racunanje velicine elementa koji ce se dodati
 
 	// provera da li ima mesta u memtable
-	if memtable.maxElNumber > memtable.curElNumber+1 {
-		memtable.curElNumber = memtable.curElNumber + 1
-		return memtable.data.Add(key, value), nil
+	if memtable.curElNumber+1 > memtable.maxElNumber {
+		memtable.Flush()
 	}
-	return skiplist.Content{}, errors.New("max size reached, flush the data")
+
+	memtable.data.Add(key, value)
+	memtable.curElNumber += 1
 }
 
 func (memtable *Memtable) Delete(key string) (skiplist.Content, error) {
@@ -49,8 +50,12 @@ func (memtable *Memtable) Get(key string) (skiplist.Content, error) {
 func (memtable *Memtable) BrziAdd(key string, value []byte) {
 	memtable.data.Add(key, value)
 }
-func (memtable *Memtable) Flush(sstable SSTable.SSTable) {
+func (memtable *Memtable) Flush() {
+	sstable := SSTable.SSTable{}
+	sstable.Construct()
 	sstable.Flush(memtable.data.GetElements())
+	memtable.Clear()
+	fmt.Println("Flushavano")
 }
 
 //func metoda([]Wal.Segment) {

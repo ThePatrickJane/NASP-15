@@ -70,6 +70,7 @@ func (wal *WAL) Constuct(maxElements int, maxSegments int) {
 	wal.maxElementsInSegment = maxElements
 	wal.file_path = "./Data/WAL1.db"
 	wal.maxSegments = maxSegments
+	wal.file_num = 1
 	wal.readMMap()
 }
 
@@ -82,11 +83,10 @@ func isError(err error) bool {
 }
 
 // Dodavanje elementa u WAL
-func (wal *WAL) append(key []byte, value []byte, tombstone uint8) {
+func (wal *WAL) Insert(key []byte, value []byte, tombstone uint8) {
 	segment := Segment{}
 	segment.Construct(key, value, tombstone)
 	//println(binary.Size(segment))
-	wal.segments = append(wal.segments, segment)
 	wal.treshold += 1
 	wal.segment_treshold += 1
 	//Na 5 segmenta pravi novi Wal file
@@ -96,6 +96,8 @@ func (wal *WAL) append(key []byte, value []byte, tombstone uint8) {
 		if wal.file_num > wal.maxSegments {
 			wal.deleteOldSegments()
 		}
+		wal.segments = make([]Segment, 0)
+		wal.segments = append(wal.segments, segment)
 		return
 	}
 	file, err := os.OpenFile(wal.file_path, os.O_RDWR|os.O_CREATE, 0600)
@@ -133,20 +135,20 @@ func (wal *WAL) readMMap() {
 	end := 37
 	new_reading_size := 0
 	for {
-		println(end + new_reading_size)
-		println(mmapf)
+		//println(end + new_reading_size)
+		//println(mmapf)
 		if end+new_reading_size > len(mmapf) {
 			break
 		}
 		velicina_kljuca := binary.BigEndian.Uint64(result[start+21 : start+29])
 		velicina_vrednosti := binary.BigEndian.Uint64(result[start+29 : end])
 		new_reading_size = int(velicina_kljuca + velicina_vrednosti)
-		key := string(result[end : end+int(velicina_kljuca)])
-		value := string(result[end+int(velicina_kljuca) : end+int(new_reading_size)])
+		//key := string(result[end : end+int(velicina_kljuca)])
+		//value := string(result[end+int(velicina_kljuca) : end+int(new_reading_size)])
 		start = end + int(new_reading_size)
 		end = start + 37
-		println("Kljuc:", key)
-		println("Vrednost:", value)
+		//println("Kljuc:", key)
+		//println("Vrednost:", value)
 		wal.segment_treshold += 1
 	}
 
@@ -360,11 +362,12 @@ func CreateHashFunctionsS(k uint) []hash.Hash32 {
 func WALProba() {
 	wal := WAL{}
 	wal.Constuct(5, 3)
-	//wal.append([]byte("1"), []byte("asdfsdf"), 1)
-	//wal.append([]byte("123"), []byte("noicee"), 1)
-	//wal.append([]byte("1s"), []byte("asdfsdf1231"), 1)
-	//wal.append([]byte("123fd"), []byte("noicee4363"), 1)
-	//wal.append([]byte("1dfg"), []byte("asdfsdf6568"), 1)
+	wal.Insert([]byte("1"), []byte("asdfsdf"), 1)
+	wal.Insert([]byte("123"), []byte("noicee"), 1)
+	wal.Insert([]byte("1s"), []byte("asdfsdf1231"), 1)
+	wal.Insert([]byte("123fd"), []byte("noicee4363"), 1)
+	wal.Insert([]byte("1dfg"), []byte("asdfsdf6568"), 1)
+	wal.Insert([]byte("1dfg"), []byte("asdfsdf6568"), 1)
 	//wal.readMMap()
 	//wal.deleteOldSegments()
 }

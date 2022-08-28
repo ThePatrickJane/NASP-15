@@ -3,6 +3,6 @@
   "memtable_max_elements": 5,
   "lsm_max_levels": 6,
   "cache_max_elements": 4,
-  "token_bucket_max_tokens": 4,
+  "token_bucket_max_tokens": 100,
   "token_bucket_interval": 2
 }

@@ -17,6 +17,7 @@ func mainMenu(kvengine *KVEngine.KVEngine) {
 		reader := bufio.NewReader(os.Stdin)
 		text, _ := reader.ReadString('\n')
 		text = strings.Replace(text, "\n", "", -1)
+		text = strings.Replace(text, "\r", "", -1)
 
 		if strings.Compare(text, "1") == 0 {
 			getMenu(kvengine)
@@ -37,6 +38,7 @@ func getMenu(kvengine *KVEngine.KVEngine) {
 	reader := bufio.NewReader(os.Stdin)
 	key, _ := reader.ReadString('\n')
 	key = strings.Replace(key, "\n", "", -1)
+	key = strings.Replace(key, "\r", "", -1)
 
 	for {
 		fmt.Println("Izaberite opciju: GET STRING - 1, GET HYPERLOGLOG - 2, GET COUNTMINSKETCH - 3, exit - 0")
@@ -44,6 +46,7 @@ func getMenu(kvengine *KVEngine.KVEngine) {
 
 		text, _ := reader.ReadString('\n')
 		text = strings.Replace(text, "\n", "", -1)
+		text = strings.Replace(text, "\r", "", -1)
 
 		found, data := kvengine.Get(key)
 
@@ -88,6 +91,7 @@ func putMenu(kvengine *KVEngine.KVEngine) {
 	fmt.Print("Unesite kljuc: ")
 	key, _ := reader.ReadString('\n')
 	key = strings.Replace(key, "\n", "", -1)
+	key = strings.Replace(key, "\r", "", -1)
 
 	for {
 		fmt.Println("Izaberite opciju: PUT STRING - 1, PUT HYPERLOGLOG - 2, PUT COUNTMINSKETCH - 3, exit - 0")
@@ -95,6 +99,7 @@ func putMenu(kvengine *KVEngine.KVEngine) {
 
 		text, _ := reader.ReadString('\n')
 		text = strings.Replace(text, "\n", "", -1)
+		text = strings.Replace(text, "\r", "", -1)
 
 		// u if-ovima se za string samo pozove dodavanje u bazu, a za druge dve strukture se naprave nove instance, dodaju se neki podaci u strukture, odstampaju se, serijalizuju i dodaju u bazu
 
@@ -103,6 +108,7 @@ func putMenu(kvengine *KVEngine.KVEngine) {
 			fmt.Print("Unesite vrednost: ")
 			value, _ := reader.ReadString('\n')
 			value = strings.Replace(value, "\n", "", -1)
+			value = strings.Replace(value, "\r", "", -1)
 			data := []byte(value)
 
 			inserted := kvengine.Put(key, data)
@@ -154,6 +160,7 @@ func deleteMenu(kvengine *KVEngine.KVEngine) {
 	reader := bufio.NewReader(os.Stdin)
 	key, _ := reader.ReadString('\n')
 	key = strings.Replace(key, "\n", "", -1)
+	key = strings.Replace(key, "\r", "", -1)
 
 	deleted := kvengine.Delete(key)
 
@@ -175,18 +182,24 @@ func main() {
 	//fmt.Println(settings)
 
 	kvengine := KVEngine.MakeKVEngine()
-
-	mainMenu(&kvengine)
+	//
+	//mainMenu(&kvengine)
 
 	//Wal.WALProba()
 	//sstable := SSTable.SSTable{}
 	//sstable.Construct()
 	//mem := Memtable.New(5, 5)
+	kvengine.Put("proba", []byte("1"))
+	kvengine.Put("proba1", []byte("1"))
+	kvengine.Put("proba2", []byte("1"))
+	kvengine.Put("proba3", []byte("1"))
+	kvengine.Put("proba4", []byte("1"))
+	kvengine.Put("proba5", []byte("1"))
 	//mem.BrziAdd("proba3", []byte("123"))
 	//mem.BrziAdd("proba1", []byte("1234"))
 	//mem.BrziAdd("proba2", []byte("12345"))
 	//mem.BrziAdd("proba1", []byte("1234"))
 	//mem.BrziAdd("proba2", []byte("12345"))
 	//mem.Flush(sstable)
-	//SSTable.Find("proba2")
+	//fmt.Println(SSTable.Find("proba2"))
 }

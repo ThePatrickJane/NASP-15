@@ -12,9 +12,9 @@ import (
 
 type KVEngine struct {
 	tokenBucket TokenBucket.TokenBucket
-	cache Cache.Cache
-	wal Wal.WAL
-	memtable Memtable.Memtable
+	cache       Cache.Cache
+	wal         Wal.WAL
+	memtable    Memtable.Memtable
 }
 
 func (kve *KVEngine) Get(key string) (bool, []byte) {
@@ -50,6 +50,10 @@ func (kve *KVEngine) Put(key string, data []byte) bool {
 		fmt.Println("Nema dovoljno tokena.")
 		return false
 	}
+
+	kve.wal.Insert([]byte(key), data, 0)
+
+	kve.memtable.Add(key, data)
 
 	return true
 }

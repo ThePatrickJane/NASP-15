@@ -30,7 +30,7 @@ func (sstable *SSTable) Construct() {
 	}
 	sstable.NumberOfFiles = 0
 	for _, file := range allDataFiles {
-		if strings.Contains(file.Name(), "Data_Data") {
+		if strings.Contains(file.Name(), "Data_Data_lvl1") {
 			sstable.NumberOfFiles += 1
 		}
 	}
@@ -149,8 +149,8 @@ func (sstable *SSTable) InsertIntoIndexFile(key []byte, keyOffset int64, file *o
 	summaryFile.Write(indexOffsetB)
 }
 
-func ReadIndexFile(index int, indexFileOffset int) int {
-	file, err := os.OpenFile("./Data/Index_Data_lvl1_"+strconv.Itoa(index)+".db", os.O_RDONLY, 0600)
+func ReadIndexFile(substr string, indexFileOffset int) int {
+	file, err := os.OpenFile("./Data/Index_Data_lvl"+substr+".db", os.O_RDONLY, 0600)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -197,10 +197,9 @@ func ReadSummaryFile(file *os.File, desiredKey string) int {
 	return -1
 }
 
-func ReadDataFile(fileIndex int, dataFileOffset int) []byte {
+func ReadDataFile(fileSubstr string, dataFileOffset int) []byte {
 	//fmt.Println("-------------Data File---------------")
-	fileIndexStr := strconv.Itoa(fileIndex)
-	file, err := os.OpenFile("./Data/Data_Data_lvl1_"+fileIndexStr+".db", os.O_RDONLY, 0600)
+	file, err := os.OpenFile("./Data/Data_Data_lvl"+fileSubstr+".db", os.O_RDONLY, 0600)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -261,7 +260,7 @@ func GetAllFiles() []os.DirEntry {
 
 func CheckSummaryFiles(files []os.DirEntry, key string) []byte {
 	indexFileOffset := -1
-	fileIndex := -1
+	fileSubstr := ""
 	for _, file := range files {
 		fileName := file.Name()
 		if strings.Contains(fileName, "Summary") {
@@ -269,9 +268,8 @@ func CheckSummaryFiles(files []os.DirEntry, key string) []byte {
 			if indexFileOffset == -1 {
 				continue
 			} else {
-				substr := fileName[18:]
-				substr = strings.Replace(substr, ".db", "", -1)
-				fileIndex, _ = strconv.Atoi(substr)
+				fileSubstr = fileName[16:]
+				fileSubstr = strings.Replace(fileSubstr, ".db", "", -1)
 				break
 			}
 		}
@@ -279,9 +277,9 @@ func CheckSummaryFiles(files []os.DirEntry, key string) []byte {
 	if indexFileOffset == -1 {
 		return nil
 	}
-	
-	dataFileOffset := ReadIndexFile(fileIndex, indexFileOffset)
-	return ReadDataFile(fileIndex, dataFileOffset)
+
+	dataFileOffset := ReadIndexFile(fileSubstr, indexFileOffset)
+	return ReadDataFile(fileSubstr, dataFileOffset)
 }
 
 func KeyInSummaryFile(fileName string, key string) int {
