@@ -187,12 +187,12 @@ func main() {
 	//settings.LoadFromJSON()
 	//fmt.Println(settings)
 
-	kvengine := KVEngine.MakeKVEngine()
-
-	//for i := 1; i < 7; i++ {
-	//	kvengine.Put("proba" + strconv.Itoa(i), []byte(strconv.Itoa(i)))
+	//kvengine := KVEngine.MakeKVEngine()
+	//for i := 1; i < 31; i++ {
+	//	kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
 	//}
-	mainMenu(&kvengine)
+	//mainMenu(&kvengine)
+
 	//Cache.CacheProba()
 
 	//Wal.WALProba()
@@ -212,4 +212,5 @@ func main() {
 	//mem.BrziAdd("proba2", []byte("12345"))
 	//mem.Flush(sstable)
 	//fmt.Println(SSTable.Find("proba2"))
+	//LSMCompaction.LSMCompaction(1)
 }

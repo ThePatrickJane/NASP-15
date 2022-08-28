@@ -24,6 +24,7 @@ func LSMCompaction(lsmLevel int) {
 
 	deleteMerkleTreesByLevel(ssTableNames, lsmLevel)
 	deleteBloomFilterByLevel(ssTableNames, lsmLevel)
+	deleteIndexAndSummaryByLevel(ssTableNames, lsmLevel)
 
 	mergeSSTables(ssTableNames, lsmLevel)
 
@@ -35,6 +36,7 @@ func LSMCompaction(lsmLevel int) {
 
 	createNewMerkleTree(newSSTableName)
 	createNewBloomFilter(newSSTableName)
+	createNewIndexAndSummary(newSSTableName)
 
 	LSMCompaction(lsmLevel + 1)
 }
@@ -73,7 +75,7 @@ func mergeSSTables(ssTables []string, lsmLevel int) {
 		}
 	}
 
-	if iterLength > 2 {
+	if iterLength >= 2 {
 		mergeSSTables(getSSTableNamesByLevel(lsmLevel), lsmLevel)
 	}
 }
@@ -216,7 +218,7 @@ func createSSTableElement(data []byte) SSTableElement {
 	return ssTableElement
 }
 
-// getDataFileNameSerialNum example: if name is "Data_lvl1_2.db" returns 2
+// getDataFileNameSerialNum example: if name is "Data_Data_lvl1_2.db" returns 2
 func getDataFileNameSerialNum(ssTableName string) string {
 	splitByUnderscore := strings.Split(ssTableName, "_")
 	serialNum := splitByUnderscore[2]
@@ -229,9 +231,9 @@ func getAvailableSerialNumFromNextLSMLevel(lsmLevel int) string {
 	return strconv.Itoa(len(ssTablesFromNextLevel) + 1)
 }
 
-func deleteMerkleTreesByLevel(ssTables []string, lsmLevel int) {
-	for _, ssTable := range ssTables {
-		err := os.Remove("./Data/MerkleTree_lvl" + strconv.Itoa(lsmLevel) + "_" + getDataFileNameSerialNum(ssTable) + ".db")
+func deleteMerkleTreesByLevel(ssTableNames []string, lsmLevel int) {
+	for _, ssTableName := range ssTableNames {
+		err := os.Remove("./Data/MerkleTree_lvl" + strconv.Itoa(lsmLevel) + "_" + getDataFileNameSerialNum(ssTableName) + ".db")
 		if err != nil {
 			panic(err)
 		}
@@ -254,7 +256,6 @@ func createNewMerkleTree(ssTableName string) {
 			}
 		}
 		ssTableData = append(ssTableData, ssTableElement.Key)
-
 	}
 	_ = ssTableFile.Close()
 
@@ -264,9 +265,9 @@ func createNewMerkleTree(ssTableName string) {
 	merkleTree.Serialize("./Data/MerkleTree_" + strings.Join(ssTableNameSplitUnderscore[1:], "_"))
 }
 
-func deleteBloomFilterByLevel(ssTables []string, lsmLevel int) {
-	for _, ssTable := range ssTables {
-		err := os.Remove("./Data/BloomFilter_lvl" + strconv.Itoa(lsmLevel) + "_" + getDataFileNameSerialNum(ssTable) + ".db")
+func deleteBloomFilterByLevel(ssTableNames []string, lsmLevel int) {
+	for _, ssTableName := range ssTableNames {
+		err := os.Remove("./Data/BloomFilter_lvl" + strconv.Itoa(lsmLevel) + "_" + getDataFileNameSerialNum(ssTableName) + ".db")
 		if err != nil {
 			panic(err)
 		}
@@ -304,4 +305,84 @@ func createNewBloomFilter(ssTableName string) {
 	}
 	_, _ = newBloomFilterFile.Write(newBloomFilter.Serialize())
 	_ = newBloomFilterFile.Close()
+}
+
+func deleteIndexAndSummaryByLevel(ssTableNames []string, lsmLevel int) {
+	for _, ssTableName := range ssTableNames {
+		err := os.Remove("./Data/Index_lvl" + strconv.Itoa(lsmLevel) + "_" + getDataFileNameSerialNum(ssTableName) + ".db")
+		if err != nil {
+			panic(err)
+		}
+		err = os.Remove("./Data/Summary_lvl" + strconv.Itoa(lsmLevel) + "_" + getDataFileNameSerialNum(ssTableName) + ".db")
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func createNewIndexAndSummary(ssTableName string) {
+	ssTableFile, err := os.OpenFile("./Data/"+ssTableName, os.O_RDONLY, 0444)
+	if err != nil {
+		panic(err)
+	}
+
+	ssTableNameSplitUnderscore := strings.Split(ssTableName, "_")
+	indexFile, err := os.Create("./Data/Index_" + strings.Join(ssTableNameSplitUnderscore[1:], "_"))
+	if err != nil {
+		panic(err)
+	}
+	summaryFile, err := os.Create("./Data/Summary_" + strings.Join(ssTableNameSplitUnderscore[1:], "_"))
+	if err != nil {
+		panic(err)
+	}
+
+	firstElement := SSTableElement{}
+	lastElement := SSTableElement{}
+	for {
+		offset, offsetErr := ssTableFile.Seek(0, 1)
+		if offsetErr != nil {
+			panic(offsetErr)
+		}
+
+		ssTableElement, err := getNextSSTableElement(ssTableFile)
+		if err != nil {
+			if err == io.EOF {
+				lastElement = ssTableElement
+				break
+			} else {
+				panic(err)
+			}
+		}
+
+		if offset == 0 {
+			firstElement = ssTableElement
+		}
+
+		indexOffset, offsetErr := ssTableFile.Seek(0, 1)
+		if offsetErr != nil {
+			panic(offsetErr)
+		}
+
+		keyOffsetBytes := make([]byte, 8)
+		indexOffsetBytes := make([]byte, 8)
+
+		binary.BigEndian.PutUint64(keyOffsetBytes, uint64(offset))
+		binary.BigEndian.PutUint64(indexOffsetBytes, uint64(indexOffset))
+
+		_, _ = indexFile.Write(ssTableElement.KeySize[:])
+		_, _ = indexFile.Write(ssTableElement.Key)
+		_, _ = indexFile.Write(keyOffsetBytes)
+		_, _ = summaryFile.Write(ssTableElement.KeySize[:])
+		_, _ = summaryFile.Write(ssTableElement.Key)
+		_, _ = summaryFile.Write(indexOffsetBytes)
+	}
+
+	_, _ = summaryFile.Write(firstElement.KeySize[:])
+	_, _ = summaryFile.Write(firstElement.Key)
+	_, _ = summaryFile.Write(lastElement.KeySize[:])
+	_, _ = summaryFile.Write(lastElement.Key)
+
+	_ = ssTableFile.Close()
+	_ = indexFile.Close()
+	_ = summaryFile.Close()
 }
