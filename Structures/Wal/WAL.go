@@ -192,19 +192,24 @@ func ReadLastSegment() []Segment {
 		timestamp := result[start+4 : start+20]
 		tombstone := result[start+20 : start+21]
 		velicina_kljuca := binary.BigEndian.Uint64(result[start+21 : start+29])
-		velicina_vrednosti := binary.BigEndian.Uint64(result[start+29 : end])
+		velicina_vrednosti := binary.BigEndian.Uint64(result[start+29 : start+37])
+
 		new_reading_size = int(velicina_kljuca + velicina_vrednosti)
-		key := result[end : end+int(velicina_kljuca)]
-		value := result[end+int(velicina_kljuca) : end+int(new_reading_size)]
-		start = end + int(new_reading_size)
+
+		key := result[end : end+int(velicina_kljuca)] // ok
+		end += int(velicina_kljuca)
+		value := result[end : end+int(velicina_vrednosti)]
+		end += int(velicina_vrednosti)
+
 		segment := Segment{}
 		segment.crc = crc
 		segment.Timestamp = timestamp
 		segment.Tombstone = tombstone
 		segment.keysize = result[start+21 : start+29]
-		segment.valuesize = result[start+29 : end]
+		segment.valuesize = result[start+29 : start+37]
 		segment.Key = key
 		segment.Value = value
+		start = end
 		end = start + 37
 		segments = append(segments, segment)
 	}

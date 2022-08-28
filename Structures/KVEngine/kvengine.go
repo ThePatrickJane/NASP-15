@@ -74,6 +74,10 @@ func (kve *KVEngine) Delete(key string) bool {
 	return true
 }
 
+func (kve *KVEngine) ReconstructMemtable() {
+	kve.memtable.Reconstruction(Wal.ReadLastSegment())
+}
+
 func MakeKVEngine() KVEngine {
 	settings := Settings.Settings{Path: "settings.json"}
 	settings.LoadFromJSON()
