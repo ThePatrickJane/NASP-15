@@ -3,7 +3,10 @@ package Memtable
 import (
 	"Projekat/Structures/SSTable"
 	skiplist "Projekat/Structures/SkipList"
+	"Projekat/Structures/Wal"
+	"encoding/binary"
 	"fmt"
+	"strconv"
 )
 
 type Memtable struct {
@@ -58,9 +61,17 @@ func (memtable *Memtable) Flush() {
 	fmt.Println("Flushavano")
 }
 
-//func metoda([]Wal.Segment) {
-//
-//}
+func (memtable *Memtable) Reconstruction(segments []Wal.Segment) {
+	memtable.Clear()
+	for _, segment := range segments{
+		
+		key := (string)(segment.Key) 
+		value := segment.Value
+    	tombstone, _ := strconv.ParseBool(string(segment.Tombstone))
+		timestamp := (int64) (binary.BigEndian.Uint64(segment.Timestamp))
+		memtable.data.ReconstructionInsert(key,value,tombstone,timestamp)
+	}
+}
 
 func (memtable *Memtable) Update(key string, value []byte) (skiplist.Content, error) {
 

@@ -313,3 +313,53 @@ func (list *SkipList) Clear() {
 	list.height = 0
 	list.currentSize = 0
 }
+
+func (list *SkipList) ReconstructionInsert(key string, value []byte, tombstone bool, timestamp int64) Content{
+	if list.Contains(key) {
+		updatedContent, err := list.Update(key, value)
+		if err == nil {
+			return updatedContent
+		}
+
+	}
+
+	level := list.randomLevel()
+	newNode := &Node{
+		key:       key,
+		value:     value,
+		timestamp: timestamp,
+		tombstone: tombstone,
+		next:      make([]*Node, level+1),
+	}
+
+	starterNode := list.head
+
+	// loop za svaki nivo
+	for currentHeight := list.height; currentHeight >= 0; currentHeight-- {
+
+		currentNode := starterNode
+		// loop kroz cvaki cvor na odredjenom nivou
+		for ; currentNode.next[currentHeight] != nil; currentNode = currentNode.next[currentHeight] {
+
+			if currentNode.next[currentHeight].key < key {
+				starterNode = currentNode.next[currentHeight]
+
+			} else if currentNode.next[currentHeight].key > key {
+				break
+			}
+		}
+
+		// insert cvora samo ukoliko smemo na tom nivou
+		if currentHeight <= level {
+			newNode.next[currentHeight] = starterNode.next[currentHeight]
+			starterNode.next[currentHeight] = newNode
+		}
+	}
+	list.currentSize++
+	return Content{
+		Key:       newNode.key,
+		Value:     newNode.value,
+		Timestamp: newNode.timestamp,
+		Tombstone: newNode.tombstone,
+	}
+}
