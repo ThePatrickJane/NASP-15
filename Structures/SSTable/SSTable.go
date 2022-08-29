@@ -287,20 +287,22 @@ func CheckSummaryFiles(files []os.DirEntry, key string) []byte {
 	indexFileOffset := -1
 	fileSubstr := ""
 	dataFileOffset := 0
-	for _, file := range files {
-		fileName := file.Name()
-		if strings.Contains(fileName, "Summary") {
-			indexFileOffset = KeyInSummaryFile(file.Name(), key)
-			if indexFileOffset == -1 {
-				continue
-			} else {
-				fileSubstr = fileName[16:]
-				fileSubstr = strings.Replace(fileSubstr, ".db", "", -1)
-				dataFileOffset = ReadIndexFile(fileSubstr, indexFileOffset, key)
-				if dataFileOffset == -1 {
+	filesByLvls := GetFilesByLevels(files)
+	for _, fileArray := range filesByLvls {
+		for index := len(fileArray) - 1; index >= 0; index-- {
+			if strings.Contains(fileArray[index], "Summary") {
+				indexFileOffset = KeyInSummaryFile(fileArray[index], key)
+				if indexFileOffset == -1 {
 					continue
+				} else {
+					fileSubstr = fileArray[index][11:]
+					fileSubstr = strings.Replace(fileSubstr, ".db", "", -1)
+					dataFileOffset = ReadIndexFile(fileSubstr, indexFileOffset, key)
+					if dataFileOffset == -1 {
+						continue
+					}
+					break
 				}
-				break
 			}
 		}
 	}
@@ -308,6 +310,28 @@ func CheckSummaryFiles(files []os.DirEntry, key string) []byte {
 		return nil
 	}
 	return ReadDataFile(fileSubstr, dataFileOffset)
+}
+
+func GetFilesByLevels(files []os.DirEntry) [][]string {
+	filesByLvls := make([][]string, 0)
+	lvl := 1
+	filesInALvl := make([]string, 0)
+	for _, file := range files {
+		fileName := file.Name()
+		if strings.Contains(fileName, "Summary") {
+			fileLvl := fileName[11:12]
+			fLvl, _ := strconv.Atoi(fileLvl)
+			if fLvl != lvl {
+				filesByLvls = append(filesByLvls, filesInALvl)
+				filesInALvl = make([]string, 0)
+			}
+			filesInALvl = append(filesInALvl, fileName)
+		}
+	}
+	if len(filesInALvl) != 0 {
+		filesByLvls = append(filesByLvls, filesInALvl)
+	}
+	return filesByLvls
 }
 
 func KeyInSummaryFile(fileName string, key string) int {

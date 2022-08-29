@@ -1,5 +1,5 @@
 {
-  "wal_max_segments": 5,
+  "wal_max_segments": 3,
   "memtable_max_elements": 3,
   "lsm_max_levels": 6,
   "lsm_max_elements_per_level": 10,

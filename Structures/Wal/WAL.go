@@ -89,22 +89,25 @@ func (wal *WAL) Insert(key []byte, value []byte, tombstone uint8) {
 	//println(binary.Size(segment))
 	wal.treshold += 1
 	wal.segment_treshold += 1
-	//Na 5 segmenta pravi novi Wal file
-	if int(wal.segment_treshold) > wal.maxElementsInSegment {
-		wal.write_to_file_MMap(segment)
-		wal.segment_treshold = 1
-		if wal.file_num > wal.maxSegments {
-			wal.deleteOldSegments()
-		}
-		wal.segments = make([]Segment, 0)
-		wal.segments = append(wal.segments, segment)
-		return
-	}
+	wal.segments = append(wal.segments, segment)
+
 	file, err := os.OpenFile(wal.file_path, os.O_RDWR|os.O_CREATE, 0600)
 	if isError(err) {
 		return
 	}
 	wal.writeMMap(file, segment)
+	file.Close()
+	if int(wal.segment_treshold) == wal.maxElementsInSegment {
+		file, err = os.OpenFile("./Data/WAL"+strconv.Itoa(int(wal.file_num+1))+".db", os.O_CREATE, 0600)
+		wal.file_path = "./Data/WAL" + strconv.Itoa(int(wal.file_num+1)) + ".db"
+		wal.segments = make([]Segment, 0)
+		wal.segment_treshold = 0
+		wal.file_num += 1
+		file.Close()
+	}
+	if wal.file_num > wal.maxSegments {
+		wal.deleteOldSegments()
+	}
 }
 
 func (wal *WAL) readMMap() {
@@ -212,16 +215,6 @@ func ReadLastSegment() []Segment {
 
 }
 
-func (wal *WAL) write_to_file_MMap(segment Segment) {
-	file, err := os.OpenFile("./Data/WAL"+strconv.Itoa(int(wal.file_num+1))+".db", os.O_RDWR|os.O_CREATE, 0600)
-	wal.file_path = "./Data/WAL" + strconv.Itoa(int(wal.file_num+1)) + ".db"
-	if isError(err) {
-		return
-	}
-	wal.writeMMap(file, segment)
-	wal.file_num += 1
-}
-
 func (wal *WAL) writeMMap(file *os.File, segment Segment) {
 	currentLen, err := fileLen(file)
 	sz := 0
@@ -279,6 +272,7 @@ func (wal *WAL) deleteOldSegments() {
 	}
 	err = os.Rename("./Data/"+fileNames[len(fileNames)-1], "./Data/WAL1.db")
 	wal.file_path = "./Data/WAL1.db"
+	wal.file_num = 1
 	fmt.Println(err)
 
 }
