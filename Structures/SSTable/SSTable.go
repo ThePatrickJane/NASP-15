@@ -287,6 +287,7 @@ func CheckSummaryFiles(files []os.DirEntry, key string) []byte {
 	indexFileOffset := -1
 	fileSubstr := ""
 	dataFileOffset := 0
+	found := false
 	filesByLvls := GetFilesByLevels(files)
 	for _, fileArray := range filesByLvls {
 		for index := len(fileArray) - 1; index >= 0; index-- {
@@ -301,9 +302,13 @@ func CheckSummaryFiles(files []os.DirEntry, key string) []byte {
 					if dataFileOffset == -1 {
 						continue
 					}
+					found = true
 					break
 				}
 			}
+		}
+		if found {
+			break
 		}
 	}
 	if indexFileOffset == -1 {

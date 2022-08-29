@@ -4,6 +4,7 @@ import (
 	"Projekat/Structures/CountMinSketch"
 	"Projekat/Structures/HyperLogLog"
 	"Projekat/Structures/KVEngine"
+	"Projekat/Structures/SSTable"
 	"bufio"
 	"fmt"
 	"os"
@@ -190,11 +191,11 @@ func main() {
 	//settings.LoadFromJSON()
 	//fmt.Println(settings)
 
-	kvengine := KVEngine.MakeKVEngine()
+	//kvengine := KVEngine.MakeKVEngine()
 	//for i := 1; i < 31; i++ {
 	//	kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
 	//}
-	mainMenu(&kvengine)
+	//mainMenu(&kvengine)
 
 	//Cache.CacheProba()
 
@@ -220,7 +221,7 @@ func main() {
 	//mem.BrziAdd("proba1", []byte("1234"))
 	//mem.BrziAdd("proba2", []byte("12345"))
 	//mem.Flush(sstable)
-	//fmt.Println(SSTable.Find("proba26"))
+	fmt.Println(SSTable.Find("hello4"))
 	//LSMCompaction.LSMCompaction(1)
 	//kvengine.Compactions()
 }
