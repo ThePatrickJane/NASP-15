@@ -18,8 +18,9 @@ const (
 )
 
 type SSTable struct {
-	NumberOfFiles  int
-	MerkleElements [][]byte
+	NumberOfFiles       int
+	MerkleElements      [][]byte
+	nthElementInSummary int
 }
 
 // Setting default parameters for the SSTable
@@ -29,8 +30,9 @@ func (sstable *SSTable) Construct() {
 		panic(err)
 	}
 	sstable.NumberOfFiles = 0
+	sstable.nthElementInSummary = 3
 	for _, file := range allDataFiles {
-		if strings.Contains(file.Name(), "Data_lvl1") {
+		if strings.Contains(file.Name(), "Data_Data_lvl1") {
 			sstable.NumberOfFiles += 1
 		}
 	}
@@ -44,10 +46,10 @@ func (sstable *SSTable) Flush(elements []SkipList.Content) {
 //We use this method to process all the elements from the skip list and make corresponding files
 
 func (sstable *SSTable) CreateFiles(elements []SkipList.Content) {
-	file, err := os.OpenFile("./Data/Data_lvl1_"+strconv.Itoa(sstable.NumberOfFiles+1)+".db", os.O_CREATE|os.O_APPEND, 0600)
-	indexFile, _ := os.OpenFile("./Data/Index_lvl1_"+strconv.Itoa(sstable.NumberOfFiles+1)+".db", os.O_CREATE|os.O_APPEND, 0600)
-	summaryFile, _ := os.OpenFile("./Data/Summary_lvl1_"+strconv.Itoa(sstable.NumberOfFiles+1)+".db", os.O_CREATE|os.O_APPEND, 0600)
-	filterFile, _ := os.OpenFile("./Data/BloomFilter_lvl1_"+strconv.Itoa(sstable.NumberOfFiles+1)+".db", os.O_CREATE|os.O_RDWR, 0600)
+	file, err := os.OpenFile("./Data/Data_Data_lvl1_"+strconv.Itoa(sstable.NumberOfFiles+1)+".db", os.O_CREATE|os.O_APPEND, 0600)
+	indexFile, _ := os.OpenFile("./Data/Index_Data_lvl1_"+strconv.Itoa(sstable.NumberOfFiles+1)+".db", os.O_CREATE|os.O_APPEND, 0600)
+	summaryFile, _ := os.OpenFile("./Data/Summary_Data_lvl1_"+strconv.Itoa(sstable.NumberOfFiles+1)+".db", os.O_CREATE|os.O_APPEND, 0600)
+	filterFile, _ := os.OpenFile("./Data/Filter_Data_lvl1_"+strconv.Itoa(sstable.NumberOfFiles+1)+".db", os.O_CREATE|os.O_RDWR, 0600)
 
 	bloomFilter := BloomFilter.MakeBloomFilter(10, 0.1)
 
@@ -61,9 +63,13 @@ func (sstable *SSTable) CreateFiles(elements []SkipList.Content) {
 	}
 
 	//We add every element from the skiplist into a bloom filter and other files
-	for _, element := range elements {
+	for index, element := range elements {
+		addToSSTable := false
+		if index%sstable.nthElementInSummary == 0 {
+			addToSSTable = true
+		}
 		bloomFilter.Add(element.Key)
-		sstable.ElementFlush(element, file, indexFile, summaryFile)
+		sstable.ElementFlush(element, file, indexFile, summaryFile, addToSSTable)
 	}
 
 	//Creation and serialization of merkle tree
@@ -80,11 +86,10 @@ func (sstable *SSTable) CreateFiles(elements []SkipList.Content) {
 	file.Close()
 	indexFile.Close()
 	summaryFile.Close()
-	filterFile.Close()
 }
 
 // This method packs the element into a desired shape and writes it to the files
-func (sstable *SSTable) ElementFlush(element SkipList.Content, file *os.File, indexFile *os.File, summaryFile *os.File) {
+func (sstable *SSTable) ElementFlush(element SkipList.Content, file *os.File, indexFile *os.File, summaryFile *os.File, addToSSTable bool) {
 	//Defining needed variables
 
 	key := []byte(element.Key)
@@ -128,11 +133,11 @@ func (sstable *SSTable) ElementFlush(element SkipList.Content, file *os.File, in
 	file.Write(key)
 	file.Write(value)
 
-	sstable.InsertIntoIndexFile(key, int64(filePosition), indexFile, summaryFile)
+	sstable.InsertIntoIndexFile(key, int64(filePosition), indexFile, summaryFile, addToSSTable)
 }
 
 // Insert element into index file
-func (sstable *SSTable) InsertIntoIndexFile(key []byte, keyOffset int64, file *os.File, summaryFile *os.File) {
+func (sstable *SSTable) InsertIntoIndexFile(key []byte, keyOffset int64, file *os.File, summaryFile *os.File, addToSSTable bool) {
 	keySizeB := make([]byte, 8)
 	keyOffsetB := make([]byte, 8)
 	indexOffsetB := make([]byte, 8)
@@ -145,32 +150,46 @@ func (sstable *SSTable) InsertIntoIndexFile(key []byte, keyOffset int64, file *o
 	file.Write(keySizeB)
 	file.Write(key)
 	file.Write(keyOffsetB)
-	summaryFile.Write(keySizeB)
-	summaryFile.Write(key)
-	summaryFile.Write(indexOffsetB)
+	if addToSSTable {
+		summaryFile.Write(keySizeB)
+		summaryFile.Write(key)
+		summaryFile.Write(indexOffsetB)
+	}
 }
 
-func ReadIndexFile(substr string, indexFileOffset int) int {
-	file, err := os.OpenFile("./Data/Index_lvl"+substr+".db", os.O_RDONLY, 0600)
+func ReadIndexFile(substr string, indexFileOffset int, desiredKey string) int {
+	file, err := os.OpenFile("./Data/Index_Data_lvl"+substr+".db", os.O_RDONLY, 0600)
 	if err != nil {
 		log.Fatal(err)
 	}
+	found := false
 	keySize := make([]byte, 8)
 	offset := make([]byte, 8)
 	file.Seek(int64(indexFileOffset), 0)
-
-	file.Read(keySize)
-	keySizeParsed := binary.BigEndian.Uint64(keySize)
-	key := make([]byte, keySizeParsed)
-	file.Read(key)
-	file.Read(offset)
-
+	for true {
+		_, err = file.Read(keySize)
+		if err != nil {
+			return -1
+		}
+		keySizeParsed := binary.BigEndian.Uint64(keySize)
+		key := make([]byte, keySizeParsed)
+		file.Read(key)
+		file.Read(offset)
+		if string(key) == desiredKey {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return -1
+	}
 	return int(binary.BigEndian.Uint64(offset))
 }
 
 func ReadSummaryFile(file *os.File, desiredKey string) int {
 	keySize := make([]byte, 8)
 	indexFileOffset := make([]byte, 8)
+	lastOffset := 0
 
 	firstKey, lastKey := ReadSummaryFileLimits(file)
 	if desiredKey >= firstKey && desiredKey <= lastKey {
@@ -189,18 +208,22 @@ func ReadSummaryFile(file *os.File, desiredKey string) int {
 		key := make([]byte, keySizeParsed)
 		file.Read(key)
 		file.Read(indexFileOffset)
+		if string(key) > desiredKey {
+			return lastOffset
+		}
 		if string(key) != desiredKey {
+			lastOffset = int(binary.BigEndian.Uint64(indexFileOffset))
 			continue
 		}
 		return int(binary.BigEndian.Uint64(indexFileOffset))
 	}
 	file.Close()
-	return -1
+	return lastOffset
 }
 
 func ReadDataFile(fileSubstr string, dataFileOffset int) []byte {
 	//fmt.Println("-------------Data File---------------")
-	file, err := os.OpenFile("./Data/Data_lvl"+fileSubstr+".db", os.O_RDONLY, 0600)
+	file, err := os.OpenFile("./Data/Data_Data_lvl"+fileSubstr+".db", os.O_RDONLY, 0600)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -262,6 +285,7 @@ func GetAllFiles() []os.DirEntry {
 func CheckSummaryFiles(files []os.DirEntry, key string) []byte {
 	indexFileOffset := -1
 	fileSubstr := ""
+	dataFileOffset := 0
 	for _, file := range files {
 		fileName := file.Name()
 		if strings.Contains(fileName, "Summary") {
@@ -271,6 +295,10 @@ func CheckSummaryFiles(files []os.DirEntry, key string) []byte {
 			} else {
 				fileSubstr = fileName[16:]
 				fileSubstr = strings.Replace(fileSubstr, ".db", "", -1)
+				dataFileOffset = ReadIndexFile(fileSubstr, indexFileOffset, key)
+				if dataFileOffset == -1 {
+					continue
+				}
 				break
 			}
 		}
@@ -278,8 +306,6 @@ func CheckSummaryFiles(files []os.DirEntry, key string) []byte {
 	if indexFileOffset == -1 {
 		return nil
 	}
-
-	dataFileOffset := ReadIndexFile(fileSubstr, indexFileOffset)
 	return ReadDataFile(fileSubstr, dataFileOffset)
 }
 
@@ -305,16 +331,20 @@ func Find(key string) []byte {
 }
 
 func CheckBloomFilter(files []os.DirEntry, key string) bool {
+	found := false
 	for _, file := range files {
 		fileName := file.Name()
 		if strings.Contains(fileName, "Filter") {
 			bytes, _ := os.ReadFile("./Data/" + fileName)
 			newBloom := BloomFilter.BloomFilter{}
 			newBloom.Deserialize(bytes)
-			return newBloom.Search(key)
+			if newBloom.Search(key) {
+				found = true
+				break
+			}
 		}
 	}
-	return false
+	return found
 }
 
 func CRC32(data []byte) uint32 {

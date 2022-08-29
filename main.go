@@ -187,11 +187,11 @@ func main() {
 	//settings.LoadFromJSON()
 	//fmt.Println(settings)
 
-	//kvengine := KVEngine.MakeKVEngine()
+	kvengine := KVEngine.MakeKVEngine()
 	//for i := 1; i < 31; i++ {
 	//	kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
 	//}
-	//mainMenu(&kvengine)
+	mainMenu(&kvengine)
 
 	//Cache.CacheProba()
 
@@ -199,18 +199,24 @@ func main() {
 	//sstable := SSTable.SSTable{}
 	//sstable.Construct()
 	//mem := Memtable.New(5, 5)
-	//kvengine.Put("proba", []byte("1"))
+	//kvengine.Put("proba", []byte("0"))
 	//kvengine.Put("proba1", []byte("1"))
-	//kvengine.Put("proba2", []byte("1"))
-	//kvengine.Put("proba3", []byte("1"))
-	//kvengine.Put("proba4", []byte("1"))
-	//kvengine.Put("proba5", []byte("1"))
+	//kvengine.Put("proba2", []byte("2"))
+	//kvengine.Put("proba3", []byte("3"))
+	//kvengine.Put("proba4", []byte("4"))
+	//kvengine.Put("proba5", []byte("5"))
+	//kvengine.Put("proba6", []byte("6"))
+	//kvengine.Put("proba7", []byte("7"))
+	//kvengine.Put("proba8", []byte("8"))
+	//kvengine.Put("proba9", []byte("9"))
+	//kvengine.Put("probaa", []byte("a"))
+	//kvengine.Put("probab", []byte("b"))
 	//mem.BrziAdd("proba3", []byte("123"))
 	//mem.BrziAdd("proba1", []byte("1234"))
 	//mem.BrziAdd("proba2", []byte("12345"))
 	//mem.BrziAdd("proba1", []byte("1234"))
 	//mem.BrziAdd("proba2", []byte("12345"))
 	//mem.Flush(sstable)
-	//fmt.Println(SSTable.Find("proba2"))
+	//fmt.Println(SSTable.Find("proba9"))
 	//LSMCompaction.LSMCompaction(1)
 }

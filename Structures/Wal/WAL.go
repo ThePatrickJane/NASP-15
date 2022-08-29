@@ -20,7 +20,7 @@ import (
    +---------------+-----------------+---------------+---------------+-----------------+-...-+--...--+
    CRC = 32bit hash computed over the payload using CRC
    Key Size = Length of the Key data
-   Tombstone = If this record was deleted and has a value
+   Tombstone = If this record was deleted and has a Value
    Value Size = Length of the Value data
    Key = Key data
    Value = Value data
@@ -28,11 +28,11 @@ import (
 */
 
 type Segment struct {
-	crc       []byte
-	Timestamp []byte
-	Tombstone []byte
-	keysize   []byte
-	valuesize []byte
+	CRC       []byte
+	TimeStamp []byte
+	TombStone []byte
+	KeySize   []byte
+	ValueSize []byte
 	Key       []byte
 	Value     []byte
 }
@@ -41,16 +41,16 @@ type Segment struct {
 func (segment *Segment) Construct(key []byte, value []byte, tombstone uint8) {
 	segment.Key = key
 	segment.Value = value
-	segment.crc = make([]byte, 4)
-	binary.BigEndian.PutUint32(segment.crc, uint32(CRC32(key)))
-	segment.Timestamp = make([]byte, 16)
-	binary.BigEndian.PutUint64(segment.Timestamp, uint64(time.Now().Unix()))
-	segment.Tombstone = make([]byte, 1)
-	segment.Tombstone[0] = byte(tombstone)
-	segment.keysize = make([]byte, 8)
-	binary.BigEndian.PutUint64(segment.keysize, uint64(len(key)))
-	segment.valuesize = make([]byte, 8)
-	binary.BigEndian.PutUint64(segment.valuesize, uint64(len(value)))
+	segment.CRC = make([]byte, 4)
+	binary.BigEndian.PutUint32(segment.CRC, uint32(CRC32(key)))
+	segment.TimeStamp = make([]byte, 16)
+	binary.BigEndian.PutUint64(segment.TimeStamp, uint64(time.Now().Unix()))
+	segment.TombStone = make([]byte, 1)
+	segment.TombStone[0] = byte(tombstone)
+	segment.KeySize = make([]byte, 8)
+	binary.BigEndian.PutUint64(segment.KeySize, uint64(len(key)))
+	segment.ValueSize = make([]byte, 8)
+	binary.BigEndian.PutUint64(segment.ValueSize, uint64(len(value)))
 }
 
 type WAL struct {
@@ -92,7 +92,7 @@ func (wal *WAL) Insert(key []byte, value []byte, tombstone uint8) {
 	//Na 5 segmenta pravi novi Wal file
 	if int(wal.segment_treshold) > wal.maxElementsInSegment {
 		wal.write_to_file_MMap(segment)
-		wal.segment_treshold = 0
+		wal.segment_treshold = 1
 		if wal.file_num > wal.maxSegments {
 			wal.deleteOldSegments()
 		}
@@ -143,12 +143,12 @@ func (wal *WAL) readMMap() {
 		velicina_kljuca := binary.BigEndian.Uint64(result[start+21 : start+29])
 		velicina_vrednosti := binary.BigEndian.Uint64(result[start+29 : end])
 		new_reading_size = int(velicina_kljuca + velicina_vrednosti)
-		//key := string(result[end : end+int(velicina_kljuca)])
-		//value := string(result[end+int(velicina_kljuca) : end+int(new_reading_size)])
+		//Key := string(result[end : end+int(velicina_kljuca)])
+		//Value := string(result[end+int(velicina_kljuca) : end+int(new_reading_size)])
 		start = end + int(new_reading_size)
 		end = start + 37
-		//println("Kljuc:", key)
-		//println("Vrednost:", value)
+		//println("Kljuc:", Key)
+		//println("Vrednost:", Value)
 		wal.segment_treshold += 1
 	}
 
@@ -192,24 +192,19 @@ func ReadLastSegment() []Segment {
 		timestamp := result[start+4 : start+20]
 		tombstone := result[start+20 : start+21]
 		velicina_kljuca := binary.BigEndian.Uint64(result[start+21 : start+29])
-		velicina_vrednosti := binary.BigEndian.Uint64(result[start+29 : start+37])
-
+		velicina_vrednosti := binary.BigEndian.Uint64(result[start+29 : end])
 		new_reading_size = int(velicina_kljuca + velicina_vrednosti)
-
-		key := result[end : end+int(velicina_kljuca)] // ok
-		end += int(velicina_kljuca)
-		value := result[end : end+int(velicina_vrednosti)]
-		end += int(velicina_vrednosti)
-
+		key := result[end : end+int(velicina_kljuca)]
+		value := result[end+int(velicina_kljuca) : end+int(new_reading_size)]
+		start = end + int(new_reading_size)
 		segment := Segment{}
-		segment.crc = crc
-		segment.Timestamp = timestamp
-		segment.Tombstone = tombstone
-		segment.keysize = result[start+21 : start+29]
-		segment.valuesize = result[start+29 : start+37]
+		segment.CRC = crc
+		segment.TimeStamp = timestamp
+		segment.TombStone = tombstone
+		segment.KeySize = result[start+21 : start+29]
+		segment.ValueSize = result[start+29 : end]
 		segment.Key = key
 		segment.Value = value
-		start = end
 		end = start + 37
 		segments = append(segments, segment)
 	}
@@ -233,11 +228,11 @@ func (wal *WAL) writeMMap(file *os.File, segment Segment) {
 	if isError(err) {
 		return
 	}
-	sz += binary.Size(segment.crc)
-	sz += binary.Size(segment.Timestamp)
-	sz += binary.Size(segment.Tombstone)
-	sz += binary.Size(segment.keysize)
-	sz += binary.Size(segment.valuesize)
+	sz += binary.Size(segment.CRC)
+	sz += binary.Size(segment.TimeStamp)
+	sz += binary.Size(segment.TombStone)
+	sz += binary.Size(segment.KeySize)
+	sz += binary.Size(segment.ValueSize)
 	sz += binary.Size(segment.Key)
 	sz += binary.Size(segment.Value)
 
@@ -246,16 +241,16 @@ func (wal *WAL) writeMMap(file *os.File, segment Segment) {
 		return
 	}
 	mmapf, err := mmap.Map(file, mmap.RDWR, 0)
-	copy(mmapf[currentLen:currentLen+int64(binary.Size(segment.crc))], segment.crc)
-	currentLen += int64(binary.Size(segment.crc))
-	copy(mmapf[currentLen:currentLen+int64(binary.Size(segment.Timestamp))], segment.Timestamp)
-	currentLen += int64(binary.Size(segment.Timestamp))
-	copy(mmapf[currentLen:currentLen+int64(binary.Size(segment.Tombstone))], segment.Tombstone)
-	currentLen += int64(binary.Size(segment.Tombstone))
-	copy(mmapf[currentLen:currentLen+int64(binary.Size(segment.keysize))], segment.keysize)
-	currentLen += int64(binary.Size(segment.keysize))
-	copy(mmapf[currentLen:currentLen+int64(binary.Size(segment.valuesize))], segment.valuesize)
-	currentLen += int64(binary.Size(segment.valuesize))
+	copy(mmapf[currentLen:currentLen+int64(binary.Size(segment.CRC))], segment.CRC)
+	currentLen += int64(binary.Size(segment.CRC))
+	copy(mmapf[currentLen:currentLen+int64(binary.Size(segment.TimeStamp))], segment.TimeStamp)
+	currentLen += int64(binary.Size(segment.TimeStamp))
+	copy(mmapf[currentLen:currentLen+int64(binary.Size(segment.TombStone))], segment.TombStone)
+	currentLen += int64(binary.Size(segment.TombStone))
+	copy(mmapf[currentLen:currentLen+int64(binary.Size(segment.KeySize))], segment.KeySize)
+	currentLen += int64(binary.Size(segment.KeySize))
+	copy(mmapf[currentLen:currentLen+int64(binary.Size(segment.ValueSize))], segment.ValueSize)
+	currentLen += int64(binary.Size(segment.ValueSize))
 	copy(mmapf[currentLen:currentLen+int64(binary.Size(segment.Key))], segment.Key)
 	currentLen += int64(binary.Size(segment.Key))
 	copy(mmapf[currentLen:], segment.Value)
@@ -301,29 +296,29 @@ func (wal *WAL) write_to_file(file *os.File) {
 }
 
 func (wal *WAL) write(file *os.File, segment Segment) {
-	err := binary.Write(file, binary.BigEndian, segment.crc)
+	err := binary.Write(file, binary.BigEndian, segment.CRC)
 	if err != nil {
 		log.Fatal("Write failed")
 	}
 
-	err = binary.Write(file, binary.BigEndian, segment.Timestamp)
+	err = binary.Write(file, binary.BigEndian, segment.TimeStamp)
 	if err != nil {
 		log.Fatal("Write failed")
 	}
 
-	err = binary.Write(file, binary.BigEndian, segment.Tombstone)
+	err = binary.Write(file, binary.BigEndian, segment.TombStone)
 	if err != nil {
 		log.Fatal("Write failed")
 	}
 
-	err = binary.Write(file, binary.BigEndian, segment.keysize)
-	println(binary.BigEndian.Uint64(segment.keysize))
+	err = binary.Write(file, binary.BigEndian, segment.KeySize)
+	println(binary.BigEndian.Uint64(segment.KeySize))
 	if err != nil {
 		log.Fatal("Write failed")
 	}
 
-	err = binary.Write(file, binary.BigEndian, segment.valuesize)
-	println(binary.BigEndian.Uint64(segment.valuesize))
+	err = binary.Write(file, binary.BigEndian, segment.ValueSize)
+	println(binary.BigEndian.Uint64(segment.ValueSize))
 	if err != nil {
 		log.Fatal("Write failed")
 	}

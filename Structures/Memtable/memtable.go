@@ -25,13 +25,13 @@ func New(maxHeight int, maxElNumber int) *Memtable {
 func (memtable *Memtable) Add(key string, value []byte, tombstone bool) {
 	// racunanje velicine elementa koji ce se dodati
 
-	// provera da li ima mesta u memtable
-	if memtable.curElNumber+1 > memtable.maxElNumber {
-		memtable.Flush()
-	}
-
 	memtable.data.Add(key, value, tombstone)
 	memtable.curElNumber += 1
+
+	// provera da li ima mesta u memtable
+	if memtable.curElNumber == memtable.maxElNumber {
+		memtable.Flush()
+	}
 }
 
 func (memtable *Memtable) Delete(key string) (skiplist.Content, error) {
@@ -63,13 +63,13 @@ func (memtable *Memtable) Flush() {
 
 func (memtable *Memtable) Reconstruction(segments []Wal.Segment) {
 	memtable.Clear()
-	for _, segment := range segments{
-		
-		key := (string)(segment.Key) 
+	for _, segment := range segments {
+
+		key := (string)(segment.Key)
 		value := segment.Value
-    	tombstone, _ := strconv.ParseBool(string(segment.Tombstone))
-		timestamp := (int64) (binary.BigEndian.Uint64(segment.Timestamp))
-		memtable.data.ReconstructionInsert(key,value,tombstone,timestamp)
+		tombstone, _ := strconv.ParseBool(string(segment.TombStone))
+		timestamp := (int64)(binary.BigEndian.Uint64(segment.TimeStamp))
+		memtable.data.ReconstructionInsert(key, value, tombstone, timestamp)
 	}
 }
 
