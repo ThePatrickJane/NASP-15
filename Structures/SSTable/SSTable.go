@@ -184,6 +184,7 @@ func ReadIndexFile(substr string, indexFileOffset int, desiredKey string) int {
 	if !found {
 		return -1
 	}
+	file.Close()
 	return int(binary.BigEndian.Uint64(offset))
 }
 
@@ -218,7 +219,6 @@ func ReadSummaryFile(file *os.File, desiredKey string) int {
 		}
 		return int(binary.BigEndian.Uint64(indexFileOffset))
 	}
-	file.Close()
 	return lastOffset
 }
 
@@ -340,6 +340,7 @@ func KeyInSummaryFile(fileName string, key string) int {
 		panic(err)
 	}
 	indexFileOffset := ReadSummaryFile(summaryFile, key)
+	summaryFile.Close()
 	if indexFileOffset == -1 {
 		return -1
 	}

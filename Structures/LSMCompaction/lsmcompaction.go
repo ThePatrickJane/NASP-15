@@ -14,13 +14,11 @@ import (
 
 func LSMCompaction(lsmLevel int) {
 	settings := Settings.Settings{}
+	settings.Path = "./settings.json"
 	settings.LoadFromJSON()
 
 	ssTableNames := getSSTableNamesByLevel(lsmLevel)
-	nesto := len(ssTableNames)
-	nesto2 := settings.LsmMaxElementsPerLevel
-	nesto3 := settings.LsmMaxLevels
-	if nesto < nesto2 || lsmLevel >= nesto3 {
+	if len(ssTableNames) < settings.LsmMaxElementsPerLevel || lsmLevel >= settings.LsmMaxLevels {
 		return
 	}
 
@@ -30,7 +28,6 @@ func LSMCompaction(lsmLevel int) {
 	mergedSSTableName := getSSTableNamesByLevel(lsmLevel)[0]
 	availableSerialNumFromNextLSMLevel := getAvailableSerialNumFromNextLSMLevel(lsmLevel)
 	newSSTableName := "Data_lvl" + strconv.Itoa(lsmLevel+1) + "_" + availableSerialNumFromNextLSMLevel + ".db"
-
 	_ = os.Rename("./Data/"+mergedSSTableName, "./Data/"+newSSTableName)
 
 	createNewFiles(newSSTableName)
@@ -336,8 +333,6 @@ func createNewFiles(ssTableName string) {
 			_, _ = summaryFile.Write(indexOffsetBytes)
 		}
 	}
-
 	_ = indexFile.Close()
 	_ = summaryFile.Close()
-
 }
