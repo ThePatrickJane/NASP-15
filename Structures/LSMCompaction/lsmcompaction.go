@@ -302,16 +302,16 @@ func createNewFiles(ssTableName string) {
 	}
 
 	// writing first summary file element
-	_, _ = summaryFile.Write([]byte(ssTableKeys[0]))
 	firstElementKeySizeBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(firstElementKeySizeBytes, uint64(len(ssTableKeys[0])))
 	_, _ = summaryFile.Write(firstElementKeySizeBytes)
+	_, _ = summaryFile.Write([]byte(ssTableKeys[0]))
 
 	// writing last summary file element
-	_, _ = summaryFile.Write([]byte(ssTableKeys[len(ssTableKeys)-1]))
 	lastElementKeySizeBytes := make([]byte, 8)
 	binary.BigEndian.PutUint64(lastElementKeySizeBytes, uint64(len(ssTableKeys[len(ssTableKeys)-1])))
 	_, _ = summaryFile.Write(lastElementKeySizeBytes)
+	_, _ = summaryFile.Write([]byte(ssTableKeys[len(ssTableKeys)-1]))
 
 	for i := 0; i < len(ssTableKeys); i++ {
 		indexOffset, err := indexFile.Seek(0, 1)

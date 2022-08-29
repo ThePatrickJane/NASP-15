@@ -7,12 +7,13 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
 func mainMenu(kvengine *KVEngine.KVEngine) {
 	for {
-		fmt.Println("Izaberite opciju: GET - 1, PUT - 2, DELETE - 3, exit - 0")
+		fmt.Println("Izaberite opciju: GET - 1, PUT - 2, DELETE - 3, COMPACTION - 4, exit - 0")
 		fmt.Print("Opcija: ")
 		reader := bufio.NewReader(os.Stdin)
 		text, _ := reader.ReadString('\n')
@@ -25,6 +26,9 @@ func mainMenu(kvengine *KVEngine.KVEngine) {
 			putMenu(kvengine)
 		} else if strings.Compare(text, "3") == 0 {
 			deleteMenu(kvengine)
+		} else if strings.Compare(text, "4") == 0 {
+			kvengine.Compactions()
+			fmt.Println("Ivrsena kompakcija.")
 		} else if strings.Compare(text, "0") == 0 {
 			break
 		} else {
@@ -188,9 +192,9 @@ func main() {
 	//fmt.Println(settings)
 
 	kvengine := KVEngine.MakeKVEngine()
-	//for i := 1; i < 31; i++ {
-	//	kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
-	//}
+	for i := 1; i < 31; i++ {
+		kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
+	}
 	mainMenu(&kvengine)
 
 	//Cache.CacheProba()
