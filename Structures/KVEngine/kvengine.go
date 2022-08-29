@@ -3,6 +3,7 @@ package KVEngine
 import (
 	"Projekat/Settings"
 	"Projekat/Structures/Cache"
+	"Projekat/Structures/LSMCompaction"
 	"Projekat/Structures/Memtable"
 	"Projekat/Structures/SSTable"
 	"Projekat/Structures/TokenBucket"
@@ -24,8 +25,13 @@ func (kve *KVEngine) Get(key string) (bool, []byte) {
 		return false, nil
 	}
 
-	if content, err := kve.memtable.Get(key); err == nil && !content.Tombstone {
-		//kve.cache.Put(content.Key, content.Value)
+	if content, err := kve.memtable.Get(key); err == nil {
+
+		if content.Tombstone {
+			fmt.Println("Logicki je obrisano.")
+			return false, nil
+		}
+
 		fmt.Println("Nadjeno u memtable.")
 		return true, content.Value
 	}
@@ -78,6 +84,10 @@ func (kve *KVEngine) ReconstructMemtable() {
 	kve.memtable.Reconstruction(Wal.ReadLastSegment())
 }
 
+func (kve *KVEngine) Compactions() {
+	LSMCompaction.LSMCompaction(1)
+}
+
 func MakeKVEngine() KVEngine {
 	settings := Settings.Settings{Path: "settings.json"}
 	settings.LoadFromJSON()
@@ -90,6 +100,8 @@ func MakeKVEngine() KVEngine {
 	kvengine.tokenBucket = TokenBucket.MakeTokenBucket(uint64(settings.TokenBucketMaxTokens), int64(settings.TokenBucketInterval))
 	kvengine.wal = wal
 	kvengine.memtable = *Memtable.New(5, int(settings.MemtableMaxElements))
+
+	//kvengine.ReconstructMemtable()
 
 	return kvengine
 }

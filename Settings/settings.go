@@ -38,6 +38,9 @@ func (settings *Settings) CheckSettings() {
 	if settings.LsmMaxLevels == 0 {
 		settings.LsmMaxLevels = 6
 	}
+	if settings.LsmMaxElementsPerLevel == 0 {
+		settings.LsmMaxElementsPerLevel = 6
+	}
 	if settings.CacheMaxElements == 0 {
 		settings.CacheMaxElements = 4
 	}
