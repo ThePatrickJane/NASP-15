@@ -19,7 +19,7 @@ const (
 
 type SSTable struct {
 	NumberOfFiles       int
-	MerkleElements      [][]byte
+	MerkleElements      []string
 	nthElementInSummary int
 }
 
@@ -32,24 +32,24 @@ func (sstable *SSTable) Construct() {
 	sstable.NumberOfFiles = 0
 	sstable.nthElementInSummary = 3
 	for _, file := range allDataFiles {
-		if strings.Contains(file.Name(), "Data_Data_lvl1") {
+		if strings.Contains(file.Name(), "Data_lvl1") {
 			sstable.NumberOfFiles += 1
 		}
 	}
 }
 
 func (sstable *SSTable) Flush(elements []SkipList.Content) {
-	sstable.MerkleElements = make([][]byte, 0, len(elements))
+	sstable.MerkleElements = make([]string, 0, len(elements))
 	sstable.CreateFiles(elements)
 }
 
 //We use this method to process all the elements from the skip list and make corresponding files
 
 func (sstable *SSTable) CreateFiles(elements []SkipList.Content) {
-	file, err := os.OpenFile("./Data/Data_Data_lvl1_"+strconv.Itoa(sstable.NumberOfFiles+1)+".db", os.O_CREATE|os.O_APPEND, 0600)
-	indexFile, _ := os.OpenFile("./Data/Index_Data_lvl1_"+strconv.Itoa(sstable.NumberOfFiles+1)+".db", os.O_CREATE|os.O_APPEND, 0600)
-	summaryFile, _ := os.OpenFile("./Data/Summary_Data_lvl1_"+strconv.Itoa(sstable.NumberOfFiles+1)+".db", os.O_CREATE|os.O_APPEND, 0600)
-	filterFile, _ := os.OpenFile("./Data/Filter_Data_lvl1_"+strconv.Itoa(sstable.NumberOfFiles+1)+".db", os.O_CREATE|os.O_RDWR, 0600)
+	file, err := os.OpenFile("./Data/Data_lvl1_"+strconv.Itoa(sstable.NumberOfFiles+1)+".db", os.O_CREATE|os.O_APPEND, 0600)
+	indexFile, _ := os.OpenFile("./Data/Index_lvl1_"+strconv.Itoa(sstable.NumberOfFiles+1)+".db", os.O_CREATE|os.O_APPEND, 0600)
+	summaryFile, _ := os.OpenFile("./Data/Summary_lvl1_"+strconv.Itoa(sstable.NumberOfFiles+1)+".db", os.O_CREATE|os.O_APPEND, 0600)
+	filterFile, _ := os.OpenFile("./Data/BloomFilter_lvl1_"+strconv.Itoa(sstable.NumberOfFiles+1)+".db", os.O_CREATE|os.O_RDWR, 0600)
 
 	bloomFilter := BloomFilter.MakeBloomFilter(10, 0.1)
 
@@ -86,6 +86,7 @@ func (sstable *SSTable) CreateFiles(elements []SkipList.Content) {
 	file.Close()
 	indexFile.Close()
 	summaryFile.Close()
+	filterFile.Close()
 }
 
 // This method packs the element into a desired shape and writes it to the files
@@ -121,7 +122,7 @@ func (sstable *SSTable) ElementFlush(element SkipList.Content, file *os.File, in
 	segment = append(segment, valueSize...)
 	segment = append(segment, key...)
 	segment = append(segment, value...)
-	sstable.MerkleElements = append(sstable.MerkleElements, segment)
+	sstable.MerkleElements = append(sstable.MerkleElements, string(key))
 
 	//Writing to file
 
@@ -158,7 +159,7 @@ func (sstable *SSTable) InsertIntoIndexFile(key []byte, keyOffset int64, file *o
 }
 
 func ReadIndexFile(substr string, indexFileOffset int, desiredKey string) int {
-	file, err := os.OpenFile("./Data/Index_Data_lvl"+substr+".db", os.O_RDONLY, 0600)
+	file, err := os.OpenFile("./Data/Index_lvl"+substr+".db", os.O_RDONLY, 0600)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -223,7 +224,7 @@ func ReadSummaryFile(file *os.File, desiredKey string) int {
 
 func ReadDataFile(fileSubstr string, dataFileOffset int) []byte {
 	//fmt.Println("-------------Data File---------------")
-	file, err := os.OpenFile("./Data/Data_Data_lvl"+fileSubstr+".db", os.O_RDONLY, 0600)
+	file, err := os.OpenFile("./Data/Data_lvl"+fileSubstr+".db", os.O_RDONLY, 0600)
 	if err != nil {
 		log.Fatal(err)
 	}

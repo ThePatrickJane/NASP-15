@@ -10,7 +10,7 @@ type MerkleTree struct {
 	Size int
 }
 
-func (mt *MerkleTree) Form(data [][]byte) {
+func (mt *MerkleTree) Form(data []string) {
 	leafNodes := mt.getLeafNodes(data)
 	mt.formOneLevel(leafNodes)
 }
@@ -33,10 +33,10 @@ func (mt *MerkleTree) DepthSearch(nodeFunc func(node *MerkleNode)) {
 	mt.preOrderDepthSearch(mt.root, nodeFunc)
 }
 
-func (mt *MerkleTree) getLeafNodes(data [][]byte) []*MerkleNode {
+func (mt *MerkleTree) getLeafNodes(data []string) []*MerkleNode {
 	leafNodes := make([]*MerkleNode, len(data))
 	for i, d := range data {
-		node := &MerkleNode{nil, nil, Hash(d)}
+		node := &MerkleNode{nil, nil, Hash([]byte(d))}
 		leafNodes[i] = node
 	}
 	return leafNodes
@@ -107,10 +107,10 @@ func (mt *MerkleTree) Serialize(filePath string) {
 			panic(err)
 		}
 	}
-	defer file.Close()
 
-	file.Write(hashValuesForSerialization)
-	file.Sync()
+	_, _ = file.Write(hashValuesForSerialization)
+	_ = file.Sync()
+	_ = file.Close()
 }
 
 func (mt *MerkleTree) Deserialize(filePath string) {
@@ -118,7 +118,6 @@ func (mt *MerkleTree) Deserialize(filePath string) {
 	if err != nil {
 		panic(err)
 	}
-	defer file.Close()
 
 	hashValues, err := ioutil.ReadAll(file)
 	if err != nil {
@@ -142,4 +141,6 @@ func (mt *MerkleTree) Deserialize(filePath string) {
 		childIndex++
 	}
 	mt.root = nodes[0]
+
+	_ = file.Close()
 }

@@ -1,6 +1,7 @@
 package LSMCompaction
 
 import (
+	"Projekat/Settings"
 	"Projekat/Structures/BloomFilter"
 	"Projekat/Structures/MerkleTree"
 	"encoding/binary"
@@ -11,21 +12,19 @@ import (
 	"strings"
 )
 
-const (
-	maxLSMLevel = 10
-	maxSSTables = 4
-)
-
 func LSMCompaction(lsmLevel int) {
+	settings := Settings.Settings{}
+	settings.LoadFromJSON()
+
 	ssTableNames := getSSTableNamesByLevel(lsmLevel)
-	if len(ssTableNames) < maxSSTables || lsmLevel >= maxLSMLevel {
+	nesto := len(ssTableNames)
+	nesto2 := settings.LsmMaxElementsPerLevel
+	nesto3 := settings.LsmMaxLevels
+	if nesto < nesto2 || lsmLevel >= nesto3 {
 		return
 	}
 
-	deleteMerkleTreesByLevel(ssTableNames, lsmLevel)
-	deleteBloomFilterByLevel(ssTableNames, lsmLevel)
-	deleteIndexAndSummaryByLevel(ssTableNames, lsmLevel)
-
+	deleteOldFiles(ssTableNames, lsmLevel)
 	mergeSSTables(ssTableNames, lsmLevel)
 
 	mergedSSTableName := getSSTableNamesByLevel(lsmLevel)[0]
@@ -34,9 +33,7 @@ func LSMCompaction(lsmLevel int) {
 
 	_ = os.Rename("./Data/"+mergedSSTableName, "./Data/"+newSSTableName)
 
-	createNewMerkleTree(newSSTableName)
-	createNewBloomFilter(newSSTableName)
-	createNewIndexAndSummary(newSSTableName)
+	createNewFiles(newSSTableName)
 
 	LSMCompaction(lsmLevel + 1)
 }
@@ -231,85 +228,17 @@ func getAvailableSerialNumFromNextLSMLevel(lsmLevel int) string {
 	return strconv.Itoa(len(ssTablesFromNextLevel) + 1)
 }
 
-func deleteMerkleTreesByLevel(ssTableNames []string, lsmLevel int) {
+func deleteOldFiles(ssTableNames []string, lsmLevel int) {
 	for _, ssTableName := range ssTableNames {
 		err := os.Remove("./Data/MerkleTree_lvl" + strconv.Itoa(lsmLevel) + "_" + getDataFileNameSerialNum(ssTableName) + ".db")
 		if err != nil {
 			panic(err)
 		}
-	}
-}
-
-func createNewMerkleTree(ssTableName string) {
-	ssTableFile, err := os.OpenFile("./Data/"+ssTableName, os.O_RDONLY, 0444)
-	if err != nil {
-		panic(err)
-	}
-	ssTableData := make([][]byte, 0)
-	for {
-		ssTableElement, err := getNextSSTableElement(ssTableFile)
-		if err != nil {
-			if err == io.EOF {
-				break
-			} else {
-				panic(err)
-			}
-		}
-		ssTableData = append(ssTableData, ssTableElement.Key)
-	}
-	_ = ssTableFile.Close()
-
-	merkleTree := MerkleTree.MerkleTree{}
-	merkleTree.Form(ssTableData)
-	ssTableNameSplitUnderscore := strings.Split(ssTableName, "_")
-	merkleTree.Serialize("./Data/MerkleTree_" + strings.Join(ssTableNameSplitUnderscore[1:], "_"))
-}
-
-func deleteBloomFilterByLevel(ssTableNames []string, lsmLevel int) {
-	for _, ssTableName := range ssTableNames {
-		err := os.Remove("./Data/BloomFilter_lvl" + strconv.Itoa(lsmLevel) + "_" + getDataFileNameSerialNum(ssTableName) + ".db")
+		err = os.Remove("./Data/BloomFilter_lvl" + strconv.Itoa(lsmLevel) + "_" + getDataFileNameSerialNum(ssTableName) + ".db")
 		if err != nil {
 			panic(err)
 		}
-	}
-}
-
-func createNewBloomFilter(ssTableName string) {
-	ssTableFile, err := os.OpenFile("./Data/"+ssTableName, os.O_RDONLY, 0444)
-	bloomFilterKeys := make([]string, 0)
-	if err != nil {
-		panic(err)
-	}
-	for {
-		ssTableElement, err := getNextSSTableElement(ssTableFile)
-		if err != nil {
-			if err == io.EOF {
-				break
-			} else {
-				panic(err)
-			}
-		}
-		bloomFilterKeys = append(bloomFilterKeys, ssTableElement.GetKey())
-	}
-	_ = ssTableFile.Close()
-
-	newBloomFilter := BloomFilter.MakeBloomFilter(len(bloomFilterKeys), 0.1)
-	for _, key := range bloomFilterKeys {
-		newBloomFilter.Add(key)
-	}
-
-	ssTableNameSplitUnderscore := strings.Split(ssTableName, "_")
-	newBloomFilterFile, err := os.Create("./Data/BloomFilter_" + strings.Join(ssTableNameSplitUnderscore[1:], "_"))
-	if err != nil {
-		panic(err)
-	}
-	_, _ = newBloomFilterFile.Write(newBloomFilter.Serialize())
-	_ = newBloomFilterFile.Close()
-}
-
-func deleteIndexAndSummaryByLevel(ssTableNames []string, lsmLevel int) {
-	for _, ssTableName := range ssTableNames {
-		err := os.Remove("./Data/Index_lvl" + strconv.Itoa(lsmLevel) + "_" + getDataFileNameSerialNum(ssTableName) + ".db")
+		err = os.Remove("./Data/Index_lvl" + strconv.Itoa(lsmLevel) + "_" + getDataFileNameSerialNum(ssTableName) + ".db")
 		if err != nil {
 			panic(err)
 		}
@@ -320,13 +249,49 @@ func deleteIndexAndSummaryByLevel(ssTableNames []string, lsmLevel int) {
 	}
 }
 
-func createNewIndexAndSummary(ssTableName string) {
+func createNewFiles(ssTableName string) {
 	ssTableFile, err := os.OpenFile("./Data/"+ssTableName, os.O_RDONLY, 0444)
 	if err != nil {
 		panic(err)
 	}
 
+	// for every index i in ssTableKeys, its offset is in ssTableElementPositions[i]
+	ssTableKeys := make([]string, 0)
+	ssTableElementPositions := make([]uint64, 0)
+	for {
+		position, err := ssTableFile.Seek(0, 1)
+		ssTableElement, err := getNextSSTableElement(ssTableFile)
+		if err != nil {
+			if err == io.EOF {
+				break
+			} else {
+				panic(err)
+			}
+		}
+		ssTableKeys = append(ssTableKeys, ssTableElement.GetKey())
+		ssTableElementPositions = append(ssTableElementPositions, uint64(position))
+	}
 	ssTableNameSplitUnderscore := strings.Split(ssTableName, "_")
+
+	// creating new Merkle tree
+	merkleTree := MerkleTree.MerkleTree{}
+	merkleTree.Form(ssTableKeys)
+	merkleTree.Serialize("./Data/MerkleTree_" + strings.Join(ssTableNameSplitUnderscore[1:], "_"))
+
+	// creating new Bloom filer
+	newBloomFilter := BloomFilter.MakeBloomFilter(len(ssTableKeys), 0.1)
+	for _, key := range ssTableKeys {
+		newBloomFilter.Add(key)
+	}
+
+	newBloomFilterFile, err := os.Create("./Data/BloomFilter_" + strings.Join(ssTableNameSplitUnderscore[1:], "_"))
+	if err != nil {
+		panic(err)
+	}
+	_, _ = newBloomFilterFile.Write(newBloomFilter.Serialize())
+	_ = newBloomFilterFile.Close()
+
+	// creating index and summary files
 	indexFile, err := os.Create("./Data/Index_" + strings.Join(ssTableNameSplitUnderscore[1:], "_"))
 	if err != nil {
 		panic(err)
@@ -336,53 +301,43 @@ func createNewIndexAndSummary(ssTableName string) {
 		panic(err)
 	}
 
-	firstElement := SSTableElement{}
-	lastElement := SSTableElement{}
-	for {
-		offset, offsetErr := ssTableFile.Seek(0, 1)
-		if offsetErr != nil {
-			panic(offsetErr)
-		}
+	// writing first summary file element
+	_, _ = summaryFile.Write([]byte(ssTableKeys[0]))
+	firstElementKeySizeBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(firstElementKeySizeBytes, uint64(len(ssTableKeys[0])))
+	_, _ = summaryFile.Write(firstElementKeySizeBytes)
 
-		ssTableElement, err := getNextSSTableElement(ssTableFile)
+	// writing last summary file element
+	_, _ = summaryFile.Write([]byte(ssTableKeys[len(ssTableKeys)-1]))
+	lastElementKeySizeBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(lastElementKeySizeBytes, uint64(len(ssTableKeys[len(ssTableKeys)-1])))
+	_, _ = summaryFile.Write(lastElementKeySizeBytes)
+
+	for i := 0; i < len(ssTableKeys); i++ {
+		indexOffset, err := indexFile.Seek(0, 1)
 		if err != nil {
-			if err == io.EOF {
-				lastElement = ssTableElement
-				break
-			} else {
-				panic(err)
-			}
+			panic(err)
 		}
-
-		if offset == 0 {
-			firstElement = ssTableElement
-		}
-
-		indexOffset, offsetErr := ssTableFile.Seek(0, 1)
-		if offsetErr != nil {
-			panic(offsetErr)
-		}
-
 		keyOffsetBytes := make([]byte, 8)
-		indexOffsetBytes := make([]byte, 8)
+		binary.BigEndian.PutUint64(keyOffsetBytes, ssTableElementPositions[i])
 
-		binary.BigEndian.PutUint64(keyOffsetBytes, uint64(offset))
+		indexOffsetBytes := make([]byte, 8)
 		binary.BigEndian.PutUint64(indexOffsetBytes, uint64(indexOffset))
 
-		_, _ = indexFile.Write(ssTableElement.KeySize[:])
-		_, _ = indexFile.Write(ssTableElement.Key)
+		keySizeBytes := make([]byte, 8)
+		binary.BigEndian.PutUint64(keySizeBytes, uint64(len(ssTableKeys[i])))
+
+		_, _ = indexFile.Write(keySizeBytes)
+		_, _ = indexFile.Write([]byte(ssTableKeys[i]))
 		_, _ = indexFile.Write(keyOffsetBytes)
-		_, _ = summaryFile.Write(ssTableElement.KeySize[:])
-		_, _ = summaryFile.Write(ssTableElement.Key)
-		_, _ = summaryFile.Write(indexOffsetBytes)
+		if i%3 == 0 {
+			_, _ = summaryFile.Write(keySizeBytes)
+			_, _ = summaryFile.Write([]byte(ssTableKeys[i]))
+			_, _ = summaryFile.Write(indexOffsetBytes)
+		}
 	}
 
-	_, _ = summaryFile.Write(firstElement.KeySize[:])
-	_, _ = summaryFile.Write(firstElement.Key)
-	_, _ = summaryFile.Write(lastElement.KeySize[:])
-	_, _ = summaryFile.Write(lastElement.Key)
-
-	_ = ssTableFile.Close()
 	_ = indexFile.Close()
 	_ = summaryFile.Close()
+
 }

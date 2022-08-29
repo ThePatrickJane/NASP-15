@@ -8,19 +8,21 @@ import (
 )
 
 type Settings struct {
-	Path           string
-	WalMaxSegments int `json:"wal_max_segments"`
-	MemtableMaxElements  int `json:"memtable_max_elements"`
-	LsmMaxLevels         int `json:"lsm_max_levels"`
-	CacheMaxElements     int `json:"cache_max_elements"`
-	TokenBucketMaxTokens int `json:"token_bucket_max_tokens"`
-	TokenBucketInterval  int `json:"token_bucket_interval"`
+	Path                   string
+	WalMaxSegments         int `json:"wal_max_segments"`
+	MemtableMaxElements    int `json:"memtable_max_elements"`
+	LsmMaxLevels           int `json:"lsm_max_levels"`
+	LsmMaxElementsPerLevel int `json:"lsm_max_elements_per_level"`
+	CacheMaxElements       int `json:"cache_max_elements"`
+	TokenBucketMaxTokens   int `json:"token_bucket_max_tokens"`
+	TokenBucketInterval    int `json:"token_bucket_interval"`
 }
 
 func (settings *Settings) LoadDefault() {
 	settings.WalMaxSegments = 3
 	settings.MemtableMaxElements = 3
 	settings.LsmMaxLevels = 6
+	settings.LsmMaxElementsPerLevel = 6
 	settings.CacheMaxElements = 4
 	settings.TokenBucketMaxTokens = 4
 	settings.TokenBucketInterval = 2
