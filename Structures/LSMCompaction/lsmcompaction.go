@@ -58,9 +58,9 @@ func mergeSSTables(ssTables []string, lsmLevel int) {
 		newFileSerialNum := getDataFileNameSerialNum(ssTables[i]) + "-" + getDataFileNameSerialNum(ssTables[i+1])
 		mergeTwoSSTables(ssTableFile1, ssTableFile2, lsmLevel, newFileSerialNum, len(ssTables) == 2 && getLastLSMLevel() == lsmLevel)
 
-		_ = ssTableFile1.Close()
-		_ = ssTableFile2.Close()
-		err := os.Remove(ssTableFile1.Name())
+		err := ssTableFile1.Close()
+		err = ssTableFile2.Close()
+		err = os.Remove(ssTableFile1.Name())
 		if err != nil {
 			panic(err)
 		}

@@ -239,6 +239,7 @@ func ReadDataFile(fileSubstr string, dataFileOffset int) []byte {
 	file.Read(tombstoneBin)
 	if tombstoneBin[0] == 1 {
 		fmt.Println("Trazena vrednost je logicki obrisana.")
+		file.Close()
 		return nil
 	}
 
