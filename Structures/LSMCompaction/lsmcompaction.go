@@ -55,7 +55,7 @@ func mergeSSTables(ssTables []string, lsmLevel int) {
 		}
 
 		newFileSerialNum := getDataFileNameSerialNum(ssTables[i]) + "-" + getDataFileNameSerialNum(ssTables[i+1])
-		mergeTwoSSTables(ssTableFile1, ssTableFile2, lsmLevel, newFileSerialNum, iterLength == 2)
+		mergeTwoSSTables(ssTableFile1, ssTableFile2, lsmLevel, newFileSerialNum)
 
 		_ = ssTableFile1.Close()
 		_ = ssTableFile2.Close()
@@ -74,13 +74,7 @@ func mergeSSTables(ssTables []string, lsmLevel int) {
 	}
 }
 
-// mergeTwoSSTables
-// doDelete is an indicator to do physical removal of items
-// to ensure the item is removed, removal needs to be applicable only when merging the last two SSTables
-// if an item gets removed before that, there is a chance there will be an older version of the item
-// that has tombstone = 0 which managed to skip on merging with the file where that item has tombstone != 0
-// in which case the item will still be in the final merged SSTable
-func mergeTwoSSTables(ssTableFile1, ssTableFile2 *os.File, lsmLevel int, newFileSerialNum string, doDelete bool) {
+func mergeTwoSSTables(ssTableFile1, ssTableFile2 *os.File, lsmLevel int, newFileSerialNum string) {
 	newSSTableFile, err := os.Create("./Data/Data_lvl" + strconv.Itoa(lsmLevel) + "_" + newFileSerialNum + ".db")
 	if err != nil {
 		panic(err)
@@ -93,37 +87,29 @@ func mergeTwoSSTables(ssTableFile1, ssTableFile2 *os.File, lsmLevel int, newFile
 			break
 		}
 		if err1 == io.EOF {
-			if ssTableElement2.Tombstone[0] == 0 || !doDelete {
-				_, _ = newSSTableFile.Write(ssTableElement2.GetAsByteArray())
-			}
+			_, _ = newSSTableFile.Write(ssTableElement2.GetAsByteArray())
 			ssTableElement2, err2 = getNextSSTableElement(ssTableFile2)
 			continue
 		}
 		if err2 == io.EOF {
-			if ssTableElement1.Tombstone[0] == 0 || !doDelete {
-				_, _ = newSSTableFile.Write(ssTableElement1.GetAsByteArray())
-			}
+			_, _ = newSSTableFile.Write(ssTableElement1.GetAsByteArray())
 			ssTableElement1, err1 = getNextSSTableElement(ssTableFile1)
 			continue
 		}
 
 		if ssTableElement1.GetKey() < ssTableElement2.GetKey() {
-			if ssTableElement1.Tombstone[0] == 0 || !doDelete {
-				_, _ = newSSTableFile.Write(ssTableElement1.GetAsByteArray())
-			}
+			_, _ = newSSTableFile.Write(ssTableElement1.GetAsByteArray())
 			ssTableElement1, err1 = getNextSSTableElement(ssTableFile1)
 		} else if ssTableElement1.GetKey() > ssTableElement2.GetKey() {
-			if ssTableElement2.Tombstone[0] == 0 || !doDelete {
-				_, _ = newSSTableFile.Write(ssTableElement2.GetAsByteArray())
-			}
+			_, _ = newSSTableFile.Write(ssTableElement2.GetAsByteArray())
 			ssTableElement2, err2 = getNextSSTableElement(ssTableFile2)
 		} else {
 			if ssTableElement1.CheckNewer(ssTableElement2) {
-				if ssTableElement1.Tombstone[0] == 0 || !doDelete {
+				if ssTableElement1.Tombstone[0] == 0 {
 					_, _ = newSSTableFile.Write(ssTableElement1.GetAsByteArray())
 				}
 			} else {
-				if ssTableElement2.Tombstone[0] == 0 || !doDelete {
+				if ssTableElement2.Tombstone[0] == 0 {
 					_, _ = newSSTableFile.Write(ssTableElement2.GetAsByteArray())
 				}
 			}
@@ -268,6 +254,7 @@ func createNewFiles(ssTableName string) {
 		ssTableKeys = append(ssTableKeys, ssTableElement.GetKey())
 		ssTableElementPositions = append(ssTableElementPositions, uint64(position))
 	}
+	_ = ssTableFile.Close()
 	ssTableNameSplitUnderscore := strings.Split(ssTableName, "_")
 
 	// creating new Merkle tree
@@ -276,16 +263,17 @@ func createNewFiles(ssTableName string) {
 	merkleTree.Serialize("./Data/MerkleTree_" + strings.Join(ssTableNameSplitUnderscore[1:], "_"))
 
 	// creating new Bloom filer
-	newBloomFilter := BloomFilter.MakeBloomFilter(len(ssTableKeys), 0.1)
-	for _, key := range ssTableKeys {
-		newBloomFilter.Add(key)
-	}
-
 	newBloomFilterFile, err := os.Create("./Data/BloomFilter_" + strings.Join(ssTableNameSplitUnderscore[1:], "_"))
 	if err != nil {
 		panic(err)
 	}
-	_, _ = newBloomFilterFile.Write(newBloomFilter.Serialize())
+	if len(ssTableKeys) > 0 {
+		newBloomFilter := BloomFilter.MakeBloomFilter(len(ssTableKeys), 0.1)
+		for _, key := range ssTableKeys {
+			newBloomFilter.Add(key)
+		}
+		_, _ = newBloomFilterFile.Write(newBloomFilter.Serialize())
+	}
 	_ = newBloomFilterFile.Close()
 
 	// creating index and summary files
@@ -298,39 +286,41 @@ func createNewFiles(ssTableName string) {
 		panic(err)
 	}
 
-	// writing first summary file element
-	firstElementKeySizeBytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(firstElementKeySizeBytes, uint64(len(ssTableKeys[0])))
-	_, _ = summaryFile.Write(firstElementKeySizeBytes)
-	_, _ = summaryFile.Write([]byte(ssTableKeys[0]))
+	if len(ssTableKeys) > 0 {
+		// writing first summary file element
+		firstElementKeySizeBytes := make([]byte, 8)
+		binary.BigEndian.PutUint64(firstElementKeySizeBytes, uint64(len(ssTableKeys[0])))
+		_, _ = summaryFile.Write(firstElementKeySizeBytes)
+		_, _ = summaryFile.Write([]byte(ssTableKeys[0]))
 
-	// writing last summary file element
-	lastElementKeySizeBytes := make([]byte, 8)
-	binary.BigEndian.PutUint64(lastElementKeySizeBytes, uint64(len(ssTableKeys[len(ssTableKeys)-1])))
-	_, _ = summaryFile.Write(lastElementKeySizeBytes)
-	_, _ = summaryFile.Write([]byte(ssTableKeys[len(ssTableKeys)-1]))
+		// writing last summary file element
+		lastElementKeySizeBytes := make([]byte, 8)
+		binary.BigEndian.PutUint64(lastElementKeySizeBytes, uint64(len(ssTableKeys[len(ssTableKeys)-1])))
+		_, _ = summaryFile.Write(lastElementKeySizeBytes)
+		_, _ = summaryFile.Write([]byte(ssTableKeys[len(ssTableKeys)-1]))
 
-	for i := 0; i < len(ssTableKeys); i++ {
-		indexOffset, err := indexFile.Seek(0, 1)
-		if err != nil {
-			panic(err)
-		}
-		keyOffsetBytes := make([]byte, 8)
-		binary.BigEndian.PutUint64(keyOffsetBytes, ssTableElementPositions[i])
+		for i := 0; i < len(ssTableKeys); i++ {
+			indexOffset, err := indexFile.Seek(0, 1)
+			if err != nil {
+				panic(err)
+			}
+			keyOffsetBytes := make([]byte, 8)
+			binary.BigEndian.PutUint64(keyOffsetBytes, ssTableElementPositions[i])
 
-		indexOffsetBytes := make([]byte, 8)
-		binary.BigEndian.PutUint64(indexOffsetBytes, uint64(indexOffset))
+			indexOffsetBytes := make([]byte, 8)
+			binary.BigEndian.PutUint64(indexOffsetBytes, uint64(indexOffset))
 
-		keySizeBytes := make([]byte, 8)
-		binary.BigEndian.PutUint64(keySizeBytes, uint64(len(ssTableKeys[i])))
+			keySizeBytes := make([]byte, 8)
+			binary.BigEndian.PutUint64(keySizeBytes, uint64(len(ssTableKeys[i])))
 
-		_, _ = indexFile.Write(keySizeBytes)
-		_, _ = indexFile.Write([]byte(ssTableKeys[i]))
-		_, _ = indexFile.Write(keyOffsetBytes)
-		if i%3 == 0 {
-			_, _ = summaryFile.Write(keySizeBytes)
-			_, _ = summaryFile.Write([]byte(ssTableKeys[i]))
-			_, _ = summaryFile.Write(indexOffsetBytes)
+			_, _ = indexFile.Write(keySizeBytes)
+			_, _ = indexFile.Write([]byte(ssTableKeys[i]))
+			_, _ = indexFile.Write(keyOffsetBytes)
+			if i%3 == 0 {
+				_, _ = summaryFile.Write(keySizeBytes)
+				_, _ = summaryFile.Write([]byte(ssTableKeys[i]))
+				_, _ = summaryFile.Write(indexOffsetBytes)
+			}
 		}
 	}
 	_ = indexFile.Close()

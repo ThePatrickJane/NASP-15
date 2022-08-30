@@ -11,6 +11,12 @@ type MerkleTree struct {
 }
 
 func (mt *MerkleTree) Form(data []string) {
+	if len(data) == 0 {
+		var emptyHash [20]byte
+		mt.root = &MerkleNode{nil, nil, emptyHash}
+		mt.Size++
+		return
+	}
 	leafNodes := mt.getLeafNodes(data)
 	mt.formOneLevel(leafNodes)
 }
