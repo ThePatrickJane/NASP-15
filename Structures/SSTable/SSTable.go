@@ -184,10 +184,10 @@ func ReadIndexFile(substr string, indexFileOffset int, desiredKey string) int {
 			break
 		}
 	}
+	file.Close()
 	if !found {
 		return -1
 	}
-	file.Close()
 	return int(binary.BigEndian.Uint64(offset))
 }
 
@@ -377,10 +377,12 @@ func GetFilesByLevels(files []os.DirEntry) [][]string {
 func KeyInSummaryFile(fileName string, key string) int {
 	summaryFile, err := os.OpenFile("./Data/"+fileName, os.O_RDONLY, 0600)
 	if err != nil {
+		summaryFile.Close()
 		panic(err)
 	}
 	indexFileOffset := ReadSummaryFile(summaryFile, key)
 	if indexFileOffset == -1 {
+		summaryFile.Close()
 		return -1
 	}
 	summaryFile.Close()

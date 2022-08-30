@@ -333,6 +333,7 @@ func createNewFiles(ssTableName string) {
 			_, _ = summaryFile.Write(indexOffsetBytes)
 		}
 	}
+	_ = ssTableFile.Close()
 	_ = indexFile.Close()
 	_ = summaryFile.Close()
 }
