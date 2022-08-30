@@ -93,6 +93,7 @@ func (wal *WAL) Insert(key []byte, value []byte, tombstone uint8) {
 
 	file, err := os.OpenFile(wal.file_path, os.O_RDWR|os.O_CREATE, 0600)
 	if isError(err) {
+		file.Close()
 		return
 	}
 	wal.writeMMap(file, segment)
@@ -199,7 +200,7 @@ func ReadLastSegment() []Segment {
 		new_reading_size = int(velicina_kljuca + velicina_vrednosti)
 		key := result[end : end+int(velicina_kljuca)]
 		value := result[end+int(velicina_kljuca) : end+int(new_reading_size)]
-
+		start = end + int(new_reading_size)
 		segment := Segment{}
 		segment.CRC = crc
 		segment.TimeStamp = timestamp
@@ -208,10 +209,10 @@ func ReadLastSegment() []Segment {
 		segment.ValueSize = result[start+29 : end]
 		segment.Key = key
 		segment.Value = value
-		start = end + int(new_reading_size)
 		end = start + 37
 		segments = append(segments, segment)
 	}
+	file.Close()
 	return segments
 
 }
@@ -284,6 +285,7 @@ func (wal *WAL) write_to_file(file *os.File) {
 	}
 	file_1, err := os.OpenFile("./Data/WAL"+strconv.Itoa(int(wal.file_num+1))+".db", os.O_CREATE, 0600)
 	if isError(err) {
+		file_1.Close()
 		return
 	}
 	file_1.Close()

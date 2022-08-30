@@ -77,6 +77,10 @@ func (kve *KVEngine) Delete(key string) bool {
 		kve.memtable.Add(key, make([]byte, 0), true)
 	}
 
+	if found, _ := kve.cache.Get(key); found {
+		kve.cache.Remove(key)
+	}
+
 	return true
 }
 

@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"io"
 	"io/ioutil"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -55,7 +56,7 @@ func mergeSSTables(ssTables []string, lsmLevel int) {
 		}
 
 		newFileSerialNum := getDataFileNameSerialNum(ssTables[i]) + "-" + getDataFileNameSerialNum(ssTables[i+1])
-		mergeTwoSSTables(ssTableFile1, ssTableFile2, lsmLevel, newFileSerialNum)
+		mergeTwoSSTables(ssTableFile1, ssTableFile2, lsmLevel, newFileSerialNum, len(ssTables) == 2 && getLastLSMLevel() == lsmLevel)
 
 		_ = ssTableFile1.Close()
 		_ = ssTableFile2.Close()
@@ -69,12 +70,12 @@ func mergeSSTables(ssTables []string, lsmLevel int) {
 		}
 	}
 
-	if iterLength >= 2 {
+	if len(ssTables) >= 2 {
 		mergeSSTables(getSSTableNamesByLevel(lsmLevel), lsmLevel)
 	}
 }
 
-func mergeTwoSSTables(ssTableFile1, ssTableFile2 *os.File, lsmLevel int, newFileSerialNum string) {
+func mergeTwoSSTables(ssTableFile1, ssTableFile2 *os.File, lsmLevel int, newFileSerialNum string, doDelete bool) {
 	newSSTableFile, err := os.Create("./Data/Data_lvl" + strconv.Itoa(lsmLevel) + "_" + newFileSerialNum + ".db")
 	if err != nil {
 		panic(err)
@@ -105,11 +106,11 @@ func mergeTwoSSTables(ssTableFile1, ssTableFile2 *os.File, lsmLevel int, newFile
 			ssTableElement2, err2 = getNextSSTableElement(ssTableFile2)
 		} else {
 			if ssTableElement1.CheckNewer(ssTableElement2) {
-				if ssTableElement1.Tombstone[0] == 0 {
+				if !(doDelete && ssTableElement1.Tombstone[0] == 1) {
 					_, _ = newSSTableFile.Write(ssTableElement1.GetAsByteArray())
 				}
 			} else {
-				if ssTableElement2.Tombstone[0] == 0 {
+				if !(doDelete && ssTableElement2.Tombstone[0] == 1) {
 					_, _ = newSSTableFile.Write(ssTableElement2.GetAsByteArray())
 				}
 			}
@@ -198,12 +199,32 @@ func createSSTableElement(data []byte) SSTableElement {
 	return ssTableElement
 }
 
-// getDataFileNameSerialNum example: if name is "Data_Data_lvl1_2.db" returns 2
-func getDataFileNameSerialNum(ssTableName string) string {
-	splitByUnderscore := strings.Split(ssTableName, "_")
+// getDataFileNameSerialNum example: if name is "Data_lvl1_2.db" returns 2
+func getDataFileNameSerialNum(dataFileName string) string {
+	splitByUnderscore := strings.Split(dataFileName, "_")
 	serialNum := splitByUnderscore[2]
 	serialNum = strings.ReplaceAll(serialNum, ".db", "")
 	return serialNum
+}
+
+func getLastLSMLevel() int {
+	lastLevel := 0
+	allFiles, err := ioutil.ReadDir("./Data/")
+	if err != nil {
+		panic(err)
+	}
+	for _, file := range allFiles {
+		if !strings.Contains(file.Name(), "Data") {
+			continue
+		}
+		fileNameSplitUnderscore := strings.Split(file.Name(), "_")
+		level, err := strconv.Atoi(fileNameSplitUnderscore[1][3:])
+		if err != nil {
+			panic(err)
+		}
+		lastLevel = int(math.Max(float64(lastLevel), float64(level)))
+	}
+	return lastLevel
 }
 
 func getAvailableSerialNumFromNextLSMLevel(lsmLevel int) string {
@@ -272,6 +293,9 @@ func createNewFiles(ssTableName string) {
 		for _, key := range ssTableKeys {
 			newBloomFilter.Add(key)
 		}
+		_, _ = newBloomFilterFile.Write(newBloomFilter.Serialize())
+	} else {
+		newBloomFilter := BloomFilter.MakeBloomFilter(1, 0.1)
 		_, _ = newBloomFilterFile.Write(newBloomFilter.Serialize())
 	}
 	_ = newBloomFilterFile.Close()

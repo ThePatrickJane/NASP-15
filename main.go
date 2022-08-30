@@ -4,6 +4,7 @@ import (
 	"Projekat/Structures/CountMinSketch"
 	"Projekat/Structures/HyperLogLog"
 	"Projekat/Structures/KVEngine"
+	"Projekat/Structures/LSMCompaction"
 	"bufio"
 	"fmt"
 	"os"
@@ -230,6 +231,6 @@ func main() {
 	//mem.BrziAdd("proba2", []byte("12345"))
 	//mem.Flush(sstable)
 	//fmt.Println(SSTable.Find("proba23"))
-	//LSMCompaction.LSMCompaction(1)
+	LSMCompaction.LSMCompaction(1)
 	//kvengine.Compactions()
 }

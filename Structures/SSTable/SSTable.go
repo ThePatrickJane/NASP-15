@@ -50,9 +50,11 @@ func (sstable *SSTable) CreateFiles(elements []SkipList.Content) {
 	indexFile, _ := os.OpenFile("./Data/Index_lvl1_"+strconv.Itoa(sstable.NumberOfFiles+1)+".db", os.O_CREATE|os.O_APPEND, 0600)
 	summaryFile, _ := os.OpenFile("./Data/Summary_lvl1_"+strconv.Itoa(sstable.NumberOfFiles+1)+".db", os.O_CREATE|os.O_APPEND, 0600)
 	filterFile, _ := os.OpenFile("./Data/BloomFilter_lvl1_"+strconv.Itoa(sstable.NumberOfFiles+1)+".db", os.O_CREATE|os.O_RDWR, 0600)
-
+	TOCFile, _ := os.OpenFile("./Data/TOC_lvl1_"+strconv.Itoa(sstable.NumberOfFiles+1)+".txt", os.O_CREATE|os.O_RDWR, 0600)
 	bloomFilter := BloomFilter.MakeBloomFilter(10, 0.1)
 
+	stringForTOCFile := "Data file: " + file.Name() + "\nIndex file: " + indexFile.Name() + "\nSummary file: " + summaryFile.Name() + "\nFilter file: " + filterFile.Name() + "\nMerkle file: ./Data/MerkleTree_lvl1_" + strconv.Itoa(sstable.NumberOfFiles+1) + ".db"
+	TOCFile.WriteString(stringForTOCFile)
 	sstable.NumberOfFiles += 1
 
 	//Writing to file the first and the last key going into the summary File
@@ -86,6 +88,7 @@ func (sstable *SSTable) CreateFiles(elements []SkipList.Content) {
 	file.Close()
 	indexFile.Close()
 	summaryFile.Close()
+	TOCFile.Close()
 	filterFile.Close()
 }
 
@@ -181,10 +184,10 @@ func ReadIndexFile(substr string, indexFileOffset int, desiredKey string) int {
 			break
 		}
 	}
+	file.Close()
 	if !found {
 		return -1
 	}
-	file.Close()
 	return int(binary.BigEndian.Uint64(offset))
 }
 
@@ -219,6 +222,7 @@ func ReadSummaryFile(file *os.File, desiredKey string) int {
 		}
 		return int(binary.BigEndian.Uint64(indexFileOffset))
 	}
+	file.Close()
 	return lastOffset
 }
 
@@ -283,28 +287,58 @@ func GetAllFiles() []os.DirEntry {
 	return allFiles
 }
 
+func GetLvlPosition(fileName string) int {
+	for index := len(fileName) - 1; index >= 0; index-- {
+		if fileName[index] == '_' {
+			return index
+		}
+	}
+	return -1
+}
+
+func GetHighestIndex(files []string) (int, string) {
+	highestIndex := "0"
+	for _, file := range files {
+		fileName := file
+		if strings.Contains(fileName, "Summary") {
+			index := fileName[13:]
+			index = strings.Replace(index, ".db", "", -1)
+			indexI, _ := strconv.Atoi(index)
+			highestIndexI, _ := strconv.Atoi(highestIndex)
+			if indexI > highestIndexI {
+				highestIndex = index
+			}
+		}
+	}
+	if len(files) == 0 {
+		return -1, "0"
+	}
+	position := GetLvlPosition(files[0])
+	lvl := files[0][11:position]
+	highestIndexI, _ := strconv.Atoi(highestIndex)
+	return highestIndexI, lvl
+}
+
 func CheckSummaryFiles(files []os.DirEntry, key string) []byte {
 	indexFileOffset := -1
 	fileSubstr := ""
 	dataFileOffset := 0
-	found := false
 	filesByLvls := GetFilesByLevels(files)
+	found := false
 	for _, fileArray := range filesByLvls {
-		for index := len(fileArray) - 1; index >= 0; index-- {
-			if strings.Contains(fileArray[index], "Summary") {
-				indexFileOffset = KeyInSummaryFile(fileArray[index], key)
-				if indexFileOffset == -1 {
+		highestIndex, lvl := GetHighestIndex(fileArray)
+		for index := highestIndex; index >= 1; index-- {
+			indexFileOffset = KeyInSummaryFile("Summary_lvl"+lvl+"_"+strconv.Itoa(index)+".db", key)
+			if indexFileOffset == -1 {
+				continue
+			} else {
+				fileSubstr = lvl + "_" + strconv.Itoa(index)
+				dataFileOffset = ReadIndexFile(fileSubstr, indexFileOffset, key)
+				if dataFileOffset == -1 {
 					continue
-				} else {
-					fileSubstr = fileArray[index][11:]
-					fileSubstr = strings.Replace(fileSubstr, ".db", "", -1)
-					dataFileOffset = ReadIndexFile(fileSubstr, indexFileOffset, key)
-					if dataFileOffset == -1 {
-						continue
-					}
-					found = true
-					break
 				}
+				found = true
+				break
 			}
 		}
 		if found {
@@ -329,6 +363,7 @@ func GetFilesByLevels(files []os.DirEntry) [][]string {
 			if fLvl != lvl {
 				filesByLvls = append(filesByLvls, filesInALvl)
 				filesInALvl = make([]string, 0)
+				lvl = fLvl
 			}
 			filesInALvl = append(filesInALvl, fileName)
 		}
@@ -342,13 +377,15 @@ func GetFilesByLevels(files []os.DirEntry) [][]string {
 func KeyInSummaryFile(fileName string, key string) int {
 	summaryFile, err := os.OpenFile("./Data/"+fileName, os.O_RDONLY, 0600)
 	if err != nil {
+		summaryFile.Close()
 		panic(err)
 	}
 	indexFileOffset := ReadSummaryFile(summaryFile, key)
-	summaryFile.Close()
 	if indexFileOffset == -1 {
+		summaryFile.Close()
 		return -1
 	}
+	summaryFile.Close()
 	return indexFileOffset
 }
 
