@@ -192,35 +192,94 @@ func main() {
 	//fmt.Println(settings)
 
 	kvengine := KVEngine.MakeKVEngine()
-	for i := 1; i < 31; i++ {
+	//for i := 1; i < 31; i++ {
+	//	kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
+	//}
+	//kvengine.Compactions()
+	//for i := 1; i < 31; i++ {
+	//	_, data := kvengine.Get("proba" + strconv.Itoa(i))
+	//	fmt.Println(string(data))
+	//}
+	//for i := 1; i < 31; i++ {
+	//	kvengine.Delete("proba" + strconv.Itoa(i))
+	//}
+	//for i := 1; i < 31; i++ {
+	//	_, data := kvengine.Get("proba" + strconv.Itoa(i))
+	//	fmt.Println(string(data))
+	//}
+	//for i := 10; i < 16; i++ {
+	//	kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i + 100)))
+	//}
+	//for i := 1; i < 31; i++ {
+	//	_, data := kvengine.Get("proba" + strconv.Itoa(i))
+	//	fmt.Println(string(data))
+	//}
+	//kvengine.Compactions() // puca kod ovih kompakcija, remove ./Data/Data_lvl1_10.db: The process cannot access the file because it is being used by another process.
+	//for i := 1; i < 31; i++ {
+	//	_, data := kvengine.Get("proba" + strconv.Itoa(i))
+	//	fmt.Println(string(data))
+	//}
+
+	for i := 1; i < 4; i++ {
+		kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
+	}
+	for i := 4; i < 7; i++ {
+		kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
+	}
+	//for i := 7; i < 10; i++ {
+	//	kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
+	//}
+	kvengine.Compactions()
+	for i := 10; i < 13; i++ {
+		kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
+	}
+	for i := 13; i < 16; i++ {
+		kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
+	}
+	for i := 16; i < 19; i++ {
 		kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
 	}
 	kvengine.Compactions()
-	for i := 1; i < 31; i++ {
-		_, data := kvengine.Get("proba" + strconv.Itoa(i))
-		fmt.Println(string(data))
-	}
-	for i := 1; i < 31; i++ {
-		kvengine.Delete("proba" + strconv.Itoa(i))
-	}
-	for i := 1; i < 31; i++ {
-		_, data := kvengine.Get("proba" + strconv.Itoa(i))
-		fmt.Println(string(data))
-	}
-	for i := 10; i < 16; i++ {
-		kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i + 100)))
-	}
-	for i := 1; i < 31; i++ {
-		_, data := kvengine.Get("proba" + strconv.Itoa(i))
-		fmt.Println(string(data))
-	}
-	kvengine.Compactions() // puca kod ovih kompakcija, remove ./Data/Data_lvl1_10.db: The process cannot access the file because it is being used by another process.
-	for i := 1; i < 31; i++ {
-		_, data := kvengine.Get("proba" + strconv.Itoa(i))
-		fmt.Println(string(data))
-	}
-
-
+	//for i := 19; i < 22; i++ {
+	//	kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
+	//}
+	//for i := 22; i < 25; i++ {
+	//	kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
+	//}
+	//for i := 25; i < 28; i++ {
+	//	kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
+	//}
+	//kvengine.Compactions() // na drugom nivou ima 3 sstabele
+	//for i := 1; i < 4; i++ {
+	//	kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i + 100)))
+	//}
+	//for i := 4; i < 7; i++ {
+	//	kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i + 100)))
+	//}
+	//for i := 7; i < 10; i++ {
+	//	kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i + 100)))
+	//}
+	//kvengine.Compactions()
+	//for i := 10; i < 13; i++ {
+	//	kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i + 100)))
+	//}
+	//for i := 13; i < 16; i++ {
+	//	kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i + 100)))
+	//}
+	//for i := 16; i < 19; i++ {
+	//	kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i + 100)))
+	//}
+	//kvengine.Compactions()
+	//for i := 19; i < 22; i++ {
+	//	kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i + 100)))
+	//}
+	//for i := 22; i < 25; i++ {
+	//	kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i + 100)))
+	//}
+	//for i := 25; i < 28; i++ {
+	//	kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i + 100)))
+	//}
+	//kvengine.Compactions()
 
 
 	//Wal.WALProba()
