@@ -7,7 +7,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"strconv"
 	"strings"
 )
 
@@ -191,17 +190,17 @@ func main() {
 	//settings.LoadFromJSON()
 	//fmt.Println(settings)
 
-	kvengine := KVEngine.MakeKVEngine()
-	for i := 0; i < 31; i++ {
-		kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
-	}
-	//for i := 40; i < 71; i++ {
+	//kvengine := KVEngine.MakeKVEngine()
+	//for i := 0; i < 6; i++ {
 	//	kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
 	//}
-	//for i := 20; i < 31; i++ {
+	//for i := 71; i < 101; i++ {
+	//	kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
+	//}
+	//for i := 70; i < 100; i++ {
 	//	kvengine.Delete("proba" + strconv.Itoa(i))
 	//}
-	mainMenu(&kvengine)
+	//mainMenu(&kvengine)
 
 	//Cache.CacheProba()
 
@@ -227,7 +226,7 @@ func main() {
 	//mem.BrziAdd("proba1", []byte("1234"))
 	//mem.BrziAdd("proba2", []byte("12345"))
 	//mem.Flush(sstable)
-	//fmt.Println(SSTable.Find("proba23"))
+	//fmt.Println(SSTable.Find("proba19"))
 	//LSMCompaction.LSMCompaction(1)
 	//kvengine.Compactions()
 }

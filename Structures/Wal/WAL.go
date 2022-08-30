@@ -285,6 +285,7 @@ func (wal *WAL) write_to_file(file *os.File) {
 	}
 	file_1, err := os.OpenFile("./Data/WAL"+strconv.Itoa(int(wal.file_num+1))+".db", os.O_CREATE, 0600)
 	if isError(err) {
+		file_1.Close()
 		return
 	}
 	file_1.Close()
