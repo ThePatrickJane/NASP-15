@@ -4,10 +4,10 @@ import (
 	"Projekat/Structures/CountMinSketch"
 	"Projekat/Structures/HyperLogLog"
 	"Projekat/Structures/KVEngine"
-	"Projekat/Structures/LSMCompaction"
 	"bufio"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -191,22 +191,37 @@ func main() {
 	//settings.LoadFromJSON()
 	//fmt.Println(settings)
 
-	//kvengine := KVEngine.MakeKVEngine()
-	//for i := 1; i < 31; i++ {
-	//	kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
-	//}
-	//for i := 1; i < 31; i++ {
-	//	kvengine.Delete("proba" + strconv.Itoa(i))
-	//}
-	//for i := 40; i < 71; i++ {
-	//	kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
-	//}
-	//for i := 40; i < 71; i++ {
-	//	kvengine.Delete("proba" + strconv.Itoa(i))
-	//}
-	//mainMenu(&kvengine)
+	kvengine := KVEngine.MakeKVEngine()
+	for i := 1; i < 31; i++ {
+		kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
+	}
+	kvengine.Compactions()
+	for i := 1; i < 31; i++ {
+		_, data := kvengine.Get("proba" + strconv.Itoa(i))
+		fmt.Println(string(data))
+	}
+	for i := 1; i < 31; i++ {
+		kvengine.Delete("proba" + strconv.Itoa(i))
+	}
+	for i := 1; i < 31; i++ {
+		_, data := kvengine.Get("proba" + strconv.Itoa(i))
+		fmt.Println(string(data))
+	}
+	for i := 10; i < 16; i++ {
+		kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i + 100)))
+	}
+	for i := 1; i < 31; i++ {
+		_, data := kvengine.Get("proba" + strconv.Itoa(i))
+		fmt.Println(string(data))
+	}
+	kvengine.Compactions() // puca kod ovih kompakcija, remove ./Data/Data_lvl1_10.db: The process cannot access the file because it is being used by another process.
+	for i := 1; i < 31; i++ {
+		_, data := kvengine.Get("proba" + strconv.Itoa(i))
+		fmt.Println(string(data))
+	}
 
-	//Cache.CacheProba()
+
+
 
 	//Wal.WALProba()
 	//sstable := SSTable.SSTable{}
@@ -231,6 +246,6 @@ func main() {
 	//mem.BrziAdd("proba2", []byte("12345"))
 	//mem.Flush(sstable)
 	//fmt.Println(SSTable.Find("proba23"))
-	LSMCompaction.LSMCompaction(1)
+	//LSMCompaction.LSMCompaction(1)
 	//kvengine.Compactions()
 }
