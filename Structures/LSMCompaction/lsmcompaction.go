@@ -58,9 +58,9 @@ func mergeSSTables(ssTables []string, lsmLevel int) {
 		newFileSerialNum := getDataFileSerialNum(ssTables[i]) + "-" + getDataFileSerialNum(ssTables[i+1])
 		mergeTwoSSTables(ssTableFile1, ssTableFile2, lsmLevel, newFileSerialNum, len(ssTables) == 2 && getLastLSMLevel() == lsmLevel)
 
-		_ = ssTableFile1.Close()
-		_ = ssTableFile2.Close()
-		err := os.Remove(ssTableFile1.Name())
+		err := ssTableFile1.Close()
+		err = ssTableFile2.Close()
+		err = os.Remove(ssTableFile1.Name())
 		if err != nil {
 			panic(err)
 		}
@@ -251,10 +251,10 @@ func deleteOldAccessoryFiles(ssTableNames []string, lsmLevel int) {
 		if err != nil {
 			panic(err)
 		}
-		err = os.Remove("./Data/TOC_lvl" + strconv.Itoa(lsmLevel) + "_" + dataFileSerialNum + ".txt")
-		if err != nil {
-			panic(err)
-		}
+		//err = os.Remove("./Data/TOC_lvl" + strconv.Itoa(lsmLevel) + "_" + dataFileSerialNum + ".txt")
+		//if err != nil {
+		//	panic(err)
+		//}
 	}
 }
 
@@ -285,7 +285,7 @@ func createNewAccessoryFiles(ssTableName string) {
 	createNewMerkleTreeFile(ssTableName, ssTableKeys)
 	createNewBloomFilterFile(ssTableName, ssTableKeys)
 	createNewIndexAndSummaryFiles(ssTableName, ssTableKeys, ssTableElementPositions)
-	createNewTOCFile(ssTableName)
+	//createNewTOCFile(ssTableName)
 
 }
 

@@ -1,0 +1,5 @@
+Data file: ./Data/Data_lvl1_3.db
+Index file: ./Data/Index_lvl1_3.db
+Summary file: ./Data/Summary_lvl1_3.db
+Filter file: ./Data/BloomFilter_lvl1_3.db
+Merkle file: ./Data/MerkleTree_lvl1_3.db

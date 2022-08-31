@@ -75,8 +75,8 @@ func (mt *MerkleTree) formOneLevel(nodes []*MerkleNode) {
 
 	if addEmptyNode {
 		emptyNode := &MerkleNode{nil, nil, Hash(nil)}
-		parentHashValue := addHashValues(nodes[parentLength-2].HashValue, emptyNode.HashValue)
-		parent := &MerkleNode{nodes[iterLength-1], emptyNode, parentHashValue}
+		parentHashValue := addHashValues(nodes[iterLength].HashValue, emptyNode.HashValue)
+		parent := &MerkleNode{nodes[iterLength], emptyNode, parentHashValue}
 		parentNodes[parentLength-1] = parent
 		mt.Size++
 	}
