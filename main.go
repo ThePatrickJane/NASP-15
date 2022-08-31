@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -191,10 +192,10 @@ func main() {
 	//settings.LoadFromJSON()
 	//fmt.Println(settings)
 
-	//kvengine := KVEngine.MakeKVEngine()
-	//for i := 1; i < 31; i++ {
-	//	kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
-	//}
+	kvengine := KVEngine.MakeKVEngine()
+	for i := 1; i < 31; i++ {
+		kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
+	}
 	//for i := 1; i < 31; i++ {
 	//	kvengine.Delete("proba" + strconv.Itoa(i))
 	//}

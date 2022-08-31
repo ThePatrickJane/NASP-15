@@ -23,7 +23,7 @@ func LSMCompaction(lsmLevel int) {
 		return
 	}
 
-	deleteOldFiles(ssTableNames, lsmLevel)
+	deleteOldAccessoryFiles(ssTableNames, lsmLevel)
 	mergeSSTables(ssTableNames, lsmLevel)
 
 	mergedSSTableName := getSSTableNamesByLevel(lsmLevel)[0]
@@ -31,7 +31,7 @@ func LSMCompaction(lsmLevel int) {
 	newSSTableName := "Data_lvl" + strconv.Itoa(lsmLevel+1) + "_" + availableSerialNumFromNextLSMLevel + ".db"
 	_ = os.Rename("./Data/"+mergedSSTableName, "./Data/"+newSSTableName)
 
-	createNewFiles(newSSTableName)
+	createNewAccessoryFiles(newSSTableName)
 
 	LSMCompaction(lsmLevel + 1)
 }
@@ -55,7 +55,7 @@ func mergeSSTables(ssTables []string, lsmLevel int) {
 			panic(err2)
 		}
 
-		newFileSerialNum := getDataFileNameSerialNum(ssTables[i]) + "-" + getDataFileNameSerialNum(ssTables[i+1])
+		newFileSerialNum := getDataFileSerialNum(ssTables[i]) + "-" + getDataFileSerialNum(ssTables[i+1])
 		mergeTwoSSTables(ssTableFile1, ssTableFile2, lsmLevel, newFileSerialNum, len(ssTables) == 2 && getLastLSMLevel() == lsmLevel)
 
 		_ = ssTableFile1.Close()
@@ -199,8 +199,8 @@ func createSSTableElement(data []byte) SSTableElement {
 	return ssTableElement
 }
 
-// getDataFileNameSerialNum example: if name is "Data_lvl1_2.db" returns 2
-func getDataFileNameSerialNum(dataFileName string) string {
+// getDataFileSerialNum example: if name is "Data_lvl1_2.db" returns 2
+func getDataFileSerialNum(dataFileName string) string {
 	splitByUnderscore := strings.Split(dataFileName, "_")
 	serialNum := splitByUnderscore[2]
 	serialNum = strings.ReplaceAll(serialNum, ".db", "")
@@ -232,28 +232,33 @@ func getAvailableSerialNumFromNextLSMLevel(lsmLevel int) string {
 	return strconv.Itoa(len(ssTablesFromNextLevel) + 1)
 }
 
-func deleteOldFiles(ssTableNames []string, lsmLevel int) {
+func deleteOldAccessoryFiles(ssTableNames []string, lsmLevel int) {
 	for _, ssTableName := range ssTableNames {
-		err := os.Remove("./Data/MerkleTree_lvl" + strconv.Itoa(lsmLevel) + "_" + getDataFileNameSerialNum(ssTableName) + ".db")
+		dataFileSerialNum := getDataFileSerialNum(ssTableName)
+		err := os.Remove("./Data/MerkleTree_lvl" + strconv.Itoa(lsmLevel) + "_" + dataFileSerialNum + ".db")
 		if err != nil {
 			panic(err)
 		}
-		err = os.Remove("./Data/BloomFilter_lvl" + strconv.Itoa(lsmLevel) + "_" + getDataFileNameSerialNum(ssTableName) + ".db")
+		err = os.Remove("./Data/BloomFilter_lvl" + strconv.Itoa(lsmLevel) + "_" + dataFileSerialNum + ".db")
 		if err != nil {
 			panic(err)
 		}
-		err = os.Remove("./Data/Index_lvl" + strconv.Itoa(lsmLevel) + "_" + getDataFileNameSerialNum(ssTableName) + ".db")
+		err = os.Remove("./Data/Index_lvl" + strconv.Itoa(lsmLevel) + "_" + dataFileSerialNum + ".db")
 		if err != nil {
 			panic(err)
 		}
-		err = os.Remove("./Data/Summary_lvl" + strconv.Itoa(lsmLevel) + "_" + getDataFileNameSerialNum(ssTableName) + ".db")
+		err = os.Remove("./Data/Summary_lvl" + strconv.Itoa(lsmLevel) + "_" + dataFileSerialNum + ".db")
+		if err != nil {
+			panic(err)
+		}
+		err = os.Remove("./Data/TOC_lvl" + strconv.Itoa(lsmLevel) + "_" + dataFileSerialNum + ".txt")
 		if err != nil {
 			panic(err)
 		}
 	}
 }
 
-func createNewFiles(ssTableName string) {
+func createNewAccessoryFiles(ssTableName string) {
 	ssTableFile, err := os.OpenFile("./Data/"+ssTableName, os.O_RDONLY, 0444)
 	if err != nil {
 		panic(err)
@@ -276,14 +281,25 @@ func createNewFiles(ssTableName string) {
 		ssTableElementPositions = append(ssTableElementPositions, uint64(position))
 	}
 	_ = ssTableFile.Close()
+
+	createNewMerkleTreeFile(ssTableName, ssTableKeys)
+	createNewBloomFilterFile(ssTableName, ssTableKeys)
+	createNewIndexAndSummaryFiles(ssTableName, ssTableKeys, ssTableElementPositions)
+	createNewTOCFile(ssTableName)
+
+}
+
+func createNewMerkleTreeFile(ssTableName string, ssTableKeys []string) {
 	ssTableNameSplitUnderscore := strings.Split(ssTableName, "_")
 
-	// creating new Merkle tree
 	merkleTree := MerkleTree.MerkleTree{}
 	merkleTree.Form(ssTableKeys)
 	merkleTree.Serialize("./Data/MerkleTree_" + strings.Join(ssTableNameSplitUnderscore[1:], "_"))
+}
 
-	// creating new Bloom filer
+func createNewBloomFilterFile(ssTableName string, ssTableKeys []string) {
+	ssTableNameSplitUnderscore := strings.Split(ssTableName, "_")
+
 	newBloomFilterFile, err := os.Create("./Data/BloomFilter_" + strings.Join(ssTableNameSplitUnderscore[1:], "_"))
 	if err != nil {
 		panic(err)
@@ -299,8 +315,11 @@ func createNewFiles(ssTableName string) {
 		_, _ = newBloomFilterFile.Write(newBloomFilter.Serialize())
 	}
 	_ = newBloomFilterFile.Close()
+}
 
-	// creating index and summary files
+func createNewIndexAndSummaryFiles(ssTableName string, ssTableKeys []string, ssTableElementPositions []uint64) {
+	ssTableNameSplitUnderscore := strings.Split(ssTableName, "_")
+
 	indexFile, err := os.Create("./Data/Index_" + strings.Join(ssTableNameSplitUnderscore[1:], "_"))
 	if err != nil {
 		panic(err)
@@ -349,4 +368,19 @@ func createNewFiles(ssTableName string) {
 	}
 	_ = indexFile.Close()
 	_ = summaryFile.Close()
+}
+
+func createNewTOCFile(ssTableName string) {
+	ssTableNameSplitUnderscore := strings.Split(ssTableName, "_")
+
+	file, err := os.Create("./Data/TOC_" + ssTableNameSplitUnderscore[1] + "_" + getDataFileSerialNum(ssTableName) + ".txt")
+	if err != nil {
+		panic(err)
+	}
+	_, _ = file.WriteString("Data file: ./Data/" + ssTableName + "\n")
+	_, _ = file.WriteString("Index file: " + "./Data/Index_" + strings.Join(ssTableNameSplitUnderscore[1:], "_") + "\n")
+	_, _ = file.WriteString("Summary file: " + "./Data/Summary_" + strings.Join(ssTableNameSplitUnderscore[1:], "_") + "\n")
+	_, _ = file.WriteString("Filter file: " + "./Data/BloomFilter_" + strings.Join(ssTableNameSplitUnderscore[1:], "_") + "\n")
+	_, _ = file.WriteString("Merkle file: " + "./Data/MerkleTree_" + strings.Join(ssTableNameSplitUnderscore[1:], "_"))
+	_ = file.Close()
 }
