@@ -209,9 +209,9 @@ func main() {
 	for i := 4; i < 7; i++ {
 		kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
 	}
-	//for i := 7; i < 10; i++ {
-	//	kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
-	//}
+	for i := 7; i < 10; i++ {
+		kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
+	}
 	kvengine.Compactions()
 	for i := 10; i < 13; i++ {
 		kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
@@ -223,16 +223,16 @@ func main() {
 		kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
 	}
 	kvengine.Compactions()
-	//for i := 19; i < 22; i++ {
-	//	kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
-	//}
-	//for i := 22; i < 25; i++ {
-	//	kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
-	//}
-	//for i := 25; i < 28; i++ {
-	//	kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
-	//}
-	//kvengine.Compactions() // na drugom nivou ima 3 sstabele
+	for i := 19; i < 22; i++ {
+		kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
+	}
+	for i := 22; i < 25; i++ {
+		kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
+	}
+	for i := 25; i < 28; i++ {
+		kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
+	}
+	kvengine.Compactions() // na drugom nivou ima 3 sstabele
 	//for i := 1; i < 4; i++ {
 	//	kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i + 100)))
 	//}

@@ -270,12 +270,12 @@ func (wal *WAL) deleteOldSegments() {
 	}
 	for index := 0; index < len(fileNames)-1; index++ {
 		err = os.Remove("./Data/" + fileNames[index])
-		fmt.Println(err)
+		//fmt.Println(err)
 	}
 	err = os.Rename("./Data/"+fileNames[len(fileNames)-1], "./Data/WAL1.db")
 	wal.file_path = "./Data/WAL1.db"
 	wal.file_num = 1
-	fmt.Println(err)
+	//fmt.Println(err)
 
 }
 
