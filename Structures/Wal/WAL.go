@@ -128,9 +128,10 @@ func (wal *WAL) readMMap() {
 	wal.file_num = index
 	file, err := os.OpenFile("./Data/WAL"+strconv.Itoa(index)+".db", os.O_RDWR, 0644)
 	mmapf, err := mmap.Map(file, mmap.RDWR, 0)
-	defer mmapf.Unmap()
 	wal.file_path = "./Data/WAL" + strconv.Itoa(index) + ".db"
 	if mmapf == nil {
+		mmapf.Unmap()
+		file.Close()
 		return
 	}
 	result := make([]byte, len(mmapf))
@@ -155,7 +156,7 @@ func (wal *WAL) readMMap() {
 		//println("Vrednost:", Value)
 		wal.segment_treshold += 1
 	}
-
+	mmapf.Unmap()
 	file.Close()
 
 }
@@ -176,8 +177,9 @@ func ReadLastSegment() []Segment {
 	}
 	file, err := os.OpenFile("./Data/WAL"+strconv.Itoa(index)+".db", os.O_RDWR, 0644)
 	mmapf, err := mmap.Map(file, mmap.RDWR, 0)
-	defer mmapf.Unmap()
 	if mmapf == nil {
+		mmapf.Unmap()
+		file.Close()
 		return nil
 	}
 	result := make([]byte, len(mmapf))
@@ -212,6 +214,7 @@ func ReadLastSegment() []Segment {
 		end = start + 37
 		segments = append(segments, segment)
 	}
+	mmapf.Unmap()
 	file.Close()
 	return segments
 
