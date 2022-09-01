@@ -128,9 +128,10 @@ func (wal *WAL) readMMap() {
 	wal.file_num = index
 	file, err := os.OpenFile("./Data/WAL"+strconv.Itoa(index)+".db", os.O_RDWR, 0644)
 	mmapf, err := mmap.Map(file, mmap.RDWR, 0)
-	defer mmapf.Unmap()
 	wal.file_path = "./Data/WAL" + strconv.Itoa(index) + ".db"
 	if mmapf == nil {
+		mmapf.Unmap()
+		file.Close()
 		return
 	}
 	result := make([]byte, len(mmapf))
@@ -155,7 +156,7 @@ func (wal *WAL) readMMap() {
 		//println("Vrednost:", Value)
 		wal.segment_treshold += 1
 	}
-
+	mmapf.Unmap()
 	file.Close()
 
 }
@@ -176,8 +177,9 @@ func ReadLastSegment() []Segment {
 	}
 	file, err := os.OpenFile("./Data/WAL"+strconv.Itoa(index)+".db", os.O_RDWR, 0644)
 	mmapf, err := mmap.Map(file, mmap.RDWR, 0)
-	defer mmapf.Unmap()
 	if mmapf == nil {
+		mmapf.Unmap()
+		file.Close()
 		return nil
 	}
 	result := make([]byte, len(mmapf))
@@ -200,7 +202,6 @@ func ReadLastSegment() []Segment {
 		new_reading_size = int(velicina_kljuca + velicina_vrednosti)
 		key := result[end : end+int(velicina_kljuca)]
 		value := result[end+int(velicina_kljuca) : end+int(new_reading_size)]
-		start = end + int(new_reading_size)
 		segment := Segment{}
 		segment.CRC = crc
 		segment.TimeStamp = timestamp
@@ -209,9 +210,11 @@ func ReadLastSegment() []Segment {
 		segment.ValueSize = result[start+29 : end]
 		segment.Key = key
 		segment.Value = value
+		start = end + int(new_reading_size)
 		end = start + 37
 		segments = append(segments, segment)
 	}
+	mmapf.Unmap()
 	file.Close()
 	return segments
 
@@ -270,12 +273,12 @@ func (wal *WAL) deleteOldSegments() {
 	}
 	for index := 0; index < len(fileNames)-1; index++ {
 		err = os.Remove("./Data/" + fileNames[index])
-		fmt.Println(err)
+		//fmt.Println(err)
 	}
 	err = os.Rename("./Data/"+fileNames[len(fileNames)-1], "./Data/WAL1.db")
 	wal.file_path = "./Data/WAL1.db"
 	wal.file_num = 1
-	fmt.Println(err)
+	//fmt.Println(err)
 
 }
 

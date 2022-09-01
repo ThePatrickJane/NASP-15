@@ -19,7 +19,7 @@ func LSMCompaction(lsmLevel int) {
 	settings.LoadFromJSON()
 
 	ssTableNames := getSSTableNamesByLevel(lsmLevel)
-	if len(ssTableNames) < settings.LsmMaxElementsPerLevel || lsmLevel >= settings.LsmMaxLevels {
+	if len(ssTableNames) <= settings.LsmMaxElementsPerLevel || lsmLevel >= settings.LsmMaxLevels {
 		return
 	}
 
