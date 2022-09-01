@@ -209,20 +209,20 @@ func main() {
 	for i := 4; i < 7; i++ {
 		kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
 	}
-	//for i := 7; i < 10; i++ {
+	for i := 7; i < 10; i++ {
+		kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
+	}
+	kvengine.Compactions()
+	//for i := 10; i < 13; i++ {
 	//	kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
 	//}
-	kvengine.Compactions()
-	for i := 10; i < 13; i++ {
-		kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
-	}
-	for i := 13; i < 16; i++ {
-		kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
-	}
-	for i := 16; i < 19; i++ {
-		kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
-	}
-	kvengine.Compactions()
+	//for i := 13; i < 16; i++ {
+	//	kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
+	//}
+	//for i := 16; i < 19; i++ {
+	//	kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
+	//}
+	//kvengine.Compactions()
 	//for i := 19; i < 22; i++ {
 	//	kvengine.Put("proba"+strconv.Itoa(i), []byte(strconv.Itoa(i)))
 	//}

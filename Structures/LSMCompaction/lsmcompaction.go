@@ -251,10 +251,10 @@ func deleteOldAccessoryFiles(ssTableNames []string, lsmLevel int) {
 		if err != nil {
 			panic(err)
 		}
-		//err = os.Remove("./Data/TOC_lvl" + strconv.Itoa(lsmLevel) + "_" + dataFileSerialNum + ".txt")
-		//if err != nil {
-		//	panic(err)
-		//}
+		err = os.Remove("./Data/TOC_lvl" + strconv.Itoa(lsmLevel) + "_" + dataFileSerialNum + ".txt")
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
@@ -285,7 +285,7 @@ func createNewAccessoryFiles(ssTableName string) {
 	createNewMerkleTreeFile(ssTableName, ssTableKeys)
 	createNewBloomFilterFile(ssTableName, ssTableKeys)
 	createNewIndexAndSummaryFiles(ssTableName, ssTableKeys, ssTableElementPositions)
-	//createNewTOCFile(ssTableName)
+	createNewTOCFile(ssTableName)
 
 }
 

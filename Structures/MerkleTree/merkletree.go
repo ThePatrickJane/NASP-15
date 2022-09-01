@@ -13,7 +13,7 @@ type MerkleTree struct {
 func (mt *MerkleTree) Form(data []string) {
 	if len(data) == 0 {
 		var emptyHash [20]byte
-		mt.root = &MerkleNode{nil, nil, emptyHash}
+		mt.root = &MerkleNode{nil, nil, emptyHash, [1]byte{1}}
 		mt.Size++
 		return
 	}
@@ -42,7 +42,7 @@ func (mt *MerkleTree) DepthSearch(nodeFunc func(node *MerkleNode)) {
 func (mt *MerkleTree) getLeafNodes(data []string) []*MerkleNode {
 	leafNodes := make([]*MerkleNode, len(data))
 	for i, d := range data {
-		node := &MerkleNode{nil, nil, Hash([]byte(d))}
+		node := &MerkleNode{nil, nil, Hash([]byte(d)), [1]byte{0}}
 		leafNodes[i] = node
 	}
 	return leafNodes
@@ -50,7 +50,7 @@ func (mt *MerkleTree) getLeafNodes(data []string) []*MerkleNode {
 
 func (mt *MerkleTree) formOneLevel(nodes []*MerkleNode) {
 	if len(nodes) == 1 {
-		mt.root = &MerkleNode{nil, nil, nodes[0].HashValue}
+		mt.root = &MerkleNode{nil, nil, nodes[0].HashValue, [1]byte{0}}
 		return
 	}
 
@@ -68,15 +68,15 @@ func (mt *MerkleTree) formOneLevel(nodes []*MerkleNode) {
 	for i := 0; i < iterLength; i += 2 {
 		child1 := nodes[i]
 		child2 := nodes[i+1]
-		parentHashValue := addHashValues(child1.HashValue, child2.HashValue)
-		parent := &MerkleNode{child1, child2, parentHashValue}
+		parentHashValue := Hash(append(child1.HashValue[:], child2.HashValue[:]...))
+		parent := &MerkleNode{child1, child2, parentHashValue, [1]byte{0}}
 		parentNodes[i/2] = parent
 	}
 
 	if addEmptyNode {
-		emptyNode := &MerkleNode{nil, nil, Hash(nil)}
-		parentHashValue := addHashValues(nodes[iterLength].HashValue, emptyNode.HashValue)
-		parent := &MerkleNode{nodes[iterLength], emptyNode, parentHashValue}
+		emptyNode := &MerkleNode{nil, nil, Hash(nil), [1]byte{1}}
+		parentHashValue := Hash(append(nodes[iterLength].HashValue[:], emptyNode.HashValue[:]...))
+		parent := &MerkleNode{nodes[iterLength], emptyNode, parentHashValue, [1]byte{0}}
 		parentNodes[parentLength-1] = parent
 		mt.Size++
 	}
@@ -99,11 +99,12 @@ func (mt *MerkleTree) preOrderDepthSearch(node *MerkleNode, nodeFunc func(node *
 
 func (mt *MerkleTree) Serialize(filePath string) {
 	serIndex := 0
-	hashValuesForSerialization := make([]byte, 20*mt.Size)
+	hashValuesForSerialization := make([]byte, 21*mt.Size)
 	mt.BreadthSearch(func(node *MerkleNode) {
 		for i := 0; i < 20; i++ {
-			hashValuesForSerialization[20*serIndex+i] = node.HashValue[i]
+			hashValuesForSerialization[21*serIndex+i] = node.HashValue[i]
 		}
+		hashValuesForSerialization[21*serIndex+20] = node.IsEmpty[0]
 		serIndex++
 	})
 	file, err := os.OpenFile(filePath, os.O_WRONLY, 0222)
@@ -130,21 +131,25 @@ func (mt *MerkleTree) Deserialize(filePath string) {
 		panic(err)
 	}
 	nodes := make([]*MerkleNode, 0)
-	for i := 0; i < len(hashValues); i += 20 {
+	for i := 0; i < len(hashValues); i += 21 {
 		var hashValue [20]byte
 		for j := 0; j < 20; j++ {
-			hashValue[j] = hashValues[i : i+20][j]
+			hashValue[j] = hashValues[i : i+21][j]
 		}
-		nodes = append(nodes, &MerkleNode{nil, nil, hashValue})
+		nodes = append(nodes, &MerkleNode{nil, nil, hashValue, [1]byte{hashValues[i : i+21][20]}})
 	}
-	childIndex := 1
+	childOffset := 1
 	for i := 0; i < len(nodes); i++ {
-		if i+childIndex >= len(nodes) {
+		if i+childOffset >= len(nodes) {
 			break
 		}
-		nodes[i].SetLeftNode(nodes[i+childIndex])
-		nodes[i].SetRightNode(nodes[i+1+childIndex])
-		childIndex++
+		if nodes[i].IsEmpty[0] != 0 {
+			childOffset--
+			continue
+		}
+		nodes[i].SetLeftNode(nodes[i+childOffset])
+		nodes[i].SetRightNode(nodes[i+1+childOffset])
+		childOffset++
 	}
 	mt.root = nodes[0]
 

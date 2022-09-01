@@ -9,6 +9,7 @@ type MerkleNode struct {
 	left      *MerkleNode
 	right     *MerkleNode
 	HashValue [20]byte
+	IsEmpty   [1]byte
 }
 
 func (node *MerkleNode) SetLeftNode(leftNode *MerkleNode) {
@@ -25,14 +26,6 @@ func (node *MerkleNode) String() string {
 
 func Hash(data []byte) [20]byte {
 	return sha1.Sum(data)
-}
-
-func addHashValues(hashValue1, hashValue2 [20]byte) [20]byte {
-	var sumHashValue [20]byte
-	for i := 0; i < 20; i++ {
-		sumHashValue[i] += hashValue1[i] + hashValue2[i]
-	}
-	return sumHashValue
 }
 
 type MerkleNodeQueue struct {
