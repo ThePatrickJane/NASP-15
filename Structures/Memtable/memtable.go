@@ -5,7 +5,6 @@ import (
 	skiplist "Projekat/Structures/SkipList"
 	"Projekat/Structures/Wal"
 	"encoding/binary"
-	"fmt"
 	"strconv"
 )
 
@@ -58,7 +57,7 @@ func (memtable *Memtable) Flush() {
 	sstable.Construct()
 	sstable.Flush(memtable.data.GetElements())
 	memtable.Clear()
-	fmt.Println("Flushavano")
+	//fmt.Println("Flushavano")
 }
 
 func (memtable *Memtable) Reconstruction(segments []Wal.Segment) {

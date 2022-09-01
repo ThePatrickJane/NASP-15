@@ -35,7 +35,7 @@ func (kve *KVEngine) Get(key string) (bool, []byte) {
 		fmt.Println("Nadjeno u memtable.")
 		return true, content.Value
 	}
-	fmt.Println(kve.cache)
+	//fmt.Println(kve.cache)
 	if found, data := kve.cache.Get(key); found {
 		fmt.Println("Nadjeno u cache.")
 		return true, data
